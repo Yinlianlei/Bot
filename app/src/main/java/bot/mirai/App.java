@@ -95,11 +95,27 @@ class BotMirai{
         });
         listenerFriend = GlobalEventChannel.INSTANCE.subscribeAlways(FriendMessageEvent.class, event -> {
             String msg = event.getMessage().contentToString();
-            Friend fri = event.getFriend();
-            if(msg.contains("ljz")){
+            //event.getSubject().sendMessage(String.valueOf(event.getTime()));
+            //Friend fri = event.getFriend();
+            if(msg.contains("/菜单")){
+                //event.getSubject().sendMessage(sql.playerMsg(fri.getId()));
+                event.getSubject().sendMessage(
+                    "命令格式: \n"+
+                    "/属性 [查看自己的状态]\n"+
+                    "/商店 [打开商店]\n"+
+                    "/外出 [外出游历]\n"+
+                    "/休息 [休息&修炼]"
+                    );
+            }else if(msg.contains("/属性")){
                 event.getSubject().sendMessage("屑");
-            }else if(msg.contains("data")){
-                event.getSubject().sendMessage(sql.playerMsg(fri.getId()));
+            }else if(msg.contains("/商店")){
+                event.getSubject().sendMessage("屑");
+            }else if(msg.contains("/外出")){
+                event.getSubject().sendMessage("屑");
+            }else if(msg.contains("/休息")){
+                event.getSubject().sendMessage("屑");
+            }else if(msg.contains("ljz")){
+                event.getSubject().sendMessage("屑");
             }
         });
         listenerStranger = GlobalEventChannel.INSTANCE.subscribeAlways(NewFriendRequestEvent.class, event -> {
