@@ -4,7 +4,6 @@ import java.io.*;
 import java.util.*;
 import java.sql.*;
 
-
 import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.BotFactory;
 import net.mamoe.mirai.contact.Friend;
@@ -26,7 +25,7 @@ import net.mamoe.mirai.message.data.MessageChain;
 import net.mamoe.mirai.message.data.Message;
 
 class BotMysql{
-    String url = "jdbc:mysql://127.0.0.1:3306/test";
+    String url = "jdbc:mysql://127.0.0.1:3306/game";
     //var driver: String = ""
     String user = "Yinlianlei";
     String password = "1114561520";
@@ -67,7 +66,6 @@ class BotMirai{
     private Listener listenerFriend;
     private Listener listenerGroup;
     private Listener listenerStranger;
-    private Listener listenerStranger2;
     private Bot bot;
     BotMirai(){
         bot = BotFactory.INSTANCE.newBot(2683380854L, "60746877hun", new BotConfiguration() {{
@@ -87,10 +85,22 @@ class BotMirai{
     void listen()throws Exception {
         listenerGroup = GlobalEventChannel.INSTANCE.subscribeAlways(GroupMessageEvent.class, event -> {
             String msg = event.getMessage().contentToString();
-            if(msg.contains("?")){
-                event.getSubject().sendMessage("Hello");
-            }else if(msg.contains("ljz")){
-                event.getSubject().sendMessage("屑");
+            if(msg.contains("/菜单")){
+                event.getSubject().sendMessage(
+                    "命令格式: \n"+
+                    "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
+                    "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
+                    "/攻击 @玩家 [攻击某位玩家]\n"+
+                    "/论道 @玩家 [和某位玩家论道]"
+                    );
+            }else if(msg.contains("/交易")){
+                event.getSubject().sendMessage("未开放");
+            }else if(msg.contains("/技能")){
+                event.getSubject().sendMessage("未开放");
+            }else if(msg.contains("/攻击")){
+                event.getSubject().sendMessage("未开放");
+            }else if(msg.contains("/论道")){
+                event.getSubject().sendMessage("未开放");
             }
         });
         listenerFriend = GlobalEventChannel.INSTANCE.subscribeAlways(FriendMessageEvent.class, event -> {
@@ -107,15 +117,13 @@ class BotMirai{
                     "/休息 [休息&修炼]"
                     );
             }else if(msg.contains("/属性")){
-                event.getSubject().sendMessage("屑");
+                event.getSubject().sendMessage("未开放");
             }else if(msg.contains("/商店")){
-                event.getSubject().sendMessage("屑");
+                event.getSubject().sendMessage("未开放");
             }else if(msg.contains("/外出")){
-                event.getSubject().sendMessage("屑");
+                event.getSubject().sendMessage("未开放");
             }else if(msg.contains("/休息")){
-                event.getSubject().sendMessage("屑");
-            }else if(msg.contains("ljz")){
-                event.getSubject().sendMessage("屑");
+                event.getSubject().sendMessage("未开放");
             }
         });
         listenerStranger = GlobalEventChannel.INSTANCE.subscribeAlways(NewFriendRequestEvent.class, event -> {
@@ -129,7 +137,6 @@ class BotMirai{
     }
 }
 
-
 public class App {
     public static void main(String[] args) {
         BotMirai Vector = new BotMirai();
@@ -139,7 +146,6 @@ public class App {
         }catch(Exception e){
             Vector.stop();
         }
-        
     }
 }
 
