@@ -24,42 +24,8 @@ import net.mamoe.mirai.message.data.PlainText;
 import net.mamoe.mirai.message.data.MessageChain;
 import net.mamoe.mirai.message.data.Message;
 
-class BotMysql{
-    String url = "jdbc:mysql://127.0.0.1:3306/game";
-    //var driver: String = ""
-    String user = "Yinlianlei";
-    String password = "1114561520";
-    Connection conn = null;
-    BotMysql(){
-        try{
-            conn = DriverManager.getConnection(url,user,password);
-        }catch(SQLException e){
-            e.printStackTrace();
-        }
-    };
+import com.alibaba.fastjson.*;
 
-    MessageChain playerMsg(Long id){
-        MessageChain re = new PlainText("").plus(new PlainText(""));
-        try {
-            String sql =  "select * from player where `id` = "+id;
-            Statement statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery(sql);
-            while(rs.next()) {
-                // 选择Name这列数据
-                String playerId = ((rs.getString("id")));
-                String playerNick = ((rs.getString("nick")));
-                re = re.plus(playerId).plus("-").plus(playerNick);
-            }
-            rs.close();
-            statement.close();
-        }
-        catch(SQLException e) {
-            e.printStackTrace();
-        }finally{
-            return re;
-        }
-    }
-}
 
 class BotMirai{
     private BotMysql sql;
