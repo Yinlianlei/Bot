@@ -321,6 +321,8 @@ public class BotMysql {
 
             git_updateGithub(time2,web.split("/"));
 
+            System.out.println(time1+" "+time2);
+
             net.init("https://api.github.com/repos/"+web+"/commits?since="+time2);
             tmpJson = net.GetURL();
 
@@ -360,7 +362,7 @@ public class BotMysql {
     void git_updateGithub(String time,String[] in){
         try{
             Statement stmt = conn.createStatement();
-            String sql = "update table github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
+            String sql = "update github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
             stmt.execute(sql);
             stmt.close();
         }catch (Exception e) {

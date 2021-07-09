@@ -132,7 +132,7 @@ public class App {
         BotMirai Vector = new BotMirai();
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
-            //Vector.listen();
+            Vector.listen();
             //BotNet net = new BotNet("https://api.github.com/repos/yinlianlei/Bot/commits");
             
             //System.out.println(net.GetURL());
