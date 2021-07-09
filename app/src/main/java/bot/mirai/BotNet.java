@@ -11,7 +11,6 @@ import com.alibaba.fastjson.JSONArray;
 
 public class BotNet {
     URL targetUrl = null;
-    InputStream in = null;
     String target = null;
     JSONObject jsonBot = null;
 
@@ -27,13 +26,11 @@ public class BotNet {
         target = in;
     }
 
-    JSONObject getLastUpdate(String time){
-        target += "?since="+time;
-        GetURL();
+    JSONObject getJSONObject(){
         return jsonBot;
     }
 
-    void GetURL() {// GET 方式进行操作
+    JSONObject GetURL() {// GET 方式进行操作
         try {
             // System.out.println("Init net System");
             targetUrl = new URL(target);
@@ -51,28 +48,30 @@ public class BotNet {
             int code = connection.getResponseCode();
             // System.out.println("Ready to read"+String.valueOf(code));
             if (code == 200) {
-                in = connection.getInputStream();// 设置输出流
+                InputStream in = connection.getInputStream();// 设置输出流
                 while (in.available() != 0) {
-                    String tmp = new String(in.readAllBytes());
-                    tmp = tmp.substring(1,tmp.length()-1);
+                    String tmp = new String(in.readAllBytes(),"utf8");
+                    
                     //System.out.println(tmp);
+                    //if(target.contains("git")){
+                    //    tmp = tmp.substring(1,tmp.length()-1);
+                    //}
+                    //else if(target.contains("bilibili")){
+                    //no operation
+                    //}
+                    //tmp = "{"+tmp+"}";
                     jsonBot = JSON.parseObject(tmp);// 对目标返回json格式进行输出
                 }
                 //System.out.println(jsonBot.jsonObj);
+                in.close();
             } else {
                 System.out.println("ERROR");
             }
         } catch (Exception e) {
             e.printStackTrace();
+            return null;
         }
-    }
-
-    void close() {
-        try {
-            in.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        return jsonBot;
     }
 }
 

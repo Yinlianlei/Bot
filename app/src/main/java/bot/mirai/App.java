@@ -25,6 +25,9 @@ import net.mamoe.mirai.message.data.PlainText;
 import net.mamoe.mirai.message.data.MessageChain;
 import net.mamoe.mirai.message.data.Message;
 
+import net.mamoe.mirai.contact.User;
+import net.mamoe.mirai.contact.Group;
+
 import com.alibaba.fastjson.*;
 
 
@@ -57,51 +60,60 @@ class BotMirai{
             //}
             //System.out.println(msg);
             //System.out.println(event.getMessage().contentToString());
-            if(msg.contains("/菜单")){
-                event.getSubject().sendMessage(
+            if(msg.charAt(0) == '/'){
+                Group group = event.getSubject();
+                if(msg.contains("task")){
+                    sql.switch(msg,event);
+                }else if(msg.contains("sub")){
+                    sql.switch(msg,event);
+                }else if(msg.contains("菜单")){
+                    group.sendMessage(
                     "命令格式: \n"+
                     "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
                     "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
                     "/攻击 @玩家 [攻击某位玩家]\n"+
                     "/论道 @玩家 [和某位玩家论道]"
                     );
-            }else if(msg.contains("/交易")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/技能")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/攻击")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/论道")){
-                event.getSubject().sendMessage("未开放");
-            }
-            if(msg.contains("/task")){
-                sql.task_swich(msg,event);
+                }else if(msg.contains("/交易")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/技能")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/攻击")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/论道")){
+                    group.sendMessage("未开放");
+                }
+                
             }
         });
         listenerFriend = GlobalEventChannel.INSTANCE.subscribeAlways(FriendMessageEvent.class, event -> {
             String msg = event.getMessage().contentToString();
             //event.getSubject().sendMessage(String.valueOf(event.getTime()));
             //Friend fri = event.getFriend();
-            if(msg.contains("/菜单")){
-                //event.getSubject().sendMessage(sql.playerMsg(fri.getId()));
-                event.getSubject().sendMessage(
+            if(msg.charAt(0) == '/'){
+                User friend = event.getSubject();
+                if(msg.contains("task")){
+                    sql.switch(msg,event);
+                }else if(msg.contains("sub")){
+                    sql.switch(msg,event);
+                }else if(msg.contains("菜单")){
+                    friend.sendMessage(
                     "命令格式: \n"+
-                    "/属性 [查看自己的状态]\n"+
-                    "/商店 [打开商店]\n"+
-                    "/外出 [外出游历]\n"+
-                    "/休息 [休息&修炼]"
+                    "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
+                    "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
+                    "/攻击 @玩家 [攻击某位玩家]\n"+
+                    "/论道 @玩家 [和某位玩家论道]"
                     );
-            }else if(msg.contains("/属性")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/商店")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/外出")){
-                event.getSubject().sendMessage("未开放");
-            }else if(msg.contains("/休息")){
-                event.getSubject().sendMessage("未开放");
-            }
-            if(msg.contains("task")){
-                sql.task_swich(msg,event);
+                }else if(msg.contains("/交易")){
+                    friend.sendMessage("未开放");
+                }else if(msg.contains("/技能")){
+                    friend.sendMessage("未开放");
+                }else if(msg.contains("/攻击")){
+                    friend.sendMessage("未开放");
+                }else if(msg.contains("/论道")){
+                    friend.sendMessage("未开放");
+                }
+                
             }
         });
         listenerStranger = GlobalEventChannel.INSTANCE.subscribeAlways(NewFriendRequestEvent.class, event -> {
@@ -118,10 +130,12 @@ class BotMirai{
 public class App {
     public static void main(String[] args) {
         BotMirai Vector = new BotMirai();
-       
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
             Vector.listen();
+            //BotNet net = new BotNet("https://api.github.com/repos/yinlianlei/Bot");
+            //net.GetURL();
+            //System.out.println(net.jsonBot.toJSONString());
         }catch(Exception e){
             Vector.stop();
         }

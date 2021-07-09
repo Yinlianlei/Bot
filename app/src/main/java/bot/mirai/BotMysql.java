@@ -16,6 +16,7 @@ import net.mamoe.mirai.event.events.AbstractMessageEvent;
 import net.mamoe.mirai.event.events.FriendMessageEvent;
 import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.contact.User;
+import net.mamoe.mirai.contact.Group;
 
 public class BotMysql {
     private final String url = "jdbc:mysql://47.102.215.193/JavaData?useSSL=true&characterEncoding=utf8";//若不设置encodoing则会导致输出为非中文字符
@@ -30,30 +31,45 @@ public class BotMysql {
             Class.forName("com.mysql.cj.jdbc.Driver");
             conn = DriverManager.getConnection(url, user, password);// mysql连接
             net = new BotNet();
-            subweb = new ArrayList();
+            subweb = new ArrayList<String>();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    void task_swich(String args,AbstractMessageEvent event){
+    void switch(String args,AbstractMessageEvent event){
         String[] in = args.split(" ");
-        switch(in[0]){
-            case "/task":switch(in[1]){
+        switch(in[0]){//command switch
+            case "/task":switch(in[1]){//all test complete
                 case "add":task_add(in,event);break;
                 case "del":task_del(in,event);break;
-                case "show":task_show(in,event);break;
+                case "list":task_list(in,event);break;
                 case "send":task_send(in,event);break;
                 case "comp":task_comp(in,event);break;
                 case "help":task_help(event);;break;
-                case "showComp":task_showComp(in,event);break;
-                default:
+                case "listC":task_listC(in,event);break;
+                default:{
                     System.out.println("输入参数错误，请查看task help");
+                }
             };break;
-            case "/git":switch(in[1]){
-                case "init":git_init(in,event);break;
+            case "/sub":switch(in[1]){//group list
+                case "list":sub_list(event);break;
+                case "git":switch(in[2]){
+                    case "init":sub_git_init(in,event);break;
+                    case "get":sub_git_getUpdate(in,event);break;
+                    case "status":
+                    default:{
+                        System.out.println("输入参数错误，请查看sub git help");
+                    }
+                }
+                case "bili":switch(in[2]){
+                    case "init":break;
+                    default:{
+                        System.out.println("输入参数错误，请查看sub bili help");
+                    }
+                }
                 default:
-                    System.out.println("输入参数错误，请查看git help")
+                    System.out.println("输入参数错误，请查看sub help");
             }
             default:
                 System.out.println("输入参数错误，请参考help");
@@ -141,7 +157,7 @@ public class BotMysql {
         }
     }
 
-    void task_show(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
+    void task_list(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
         User sender = event.getSender();
         try {
             if(task.length < 3 || task.length > 4){
@@ -152,9 +168,9 @@ public class BotMysql {
             Statement stmt = conn.createStatement();
             String sql = "select * from person_task where id = '"+targetID+"' and `mark` = 0";
             ResultSet R = stmt.executeQuery(sql);
-            String to = new String();//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
+            String to = new String("");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
-                to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\t"+R.getString("mark")+"\n");
+                to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\n");
             }
             if(task.length == 4 && task[3].equals("public")){
                 GroupMessageEvent events = (GroupMessageEvent)event;
@@ -170,7 +186,7 @@ public class BotMysql {
         }
     }
 
-    void task_showComp(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
+    void task_listC(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
         User sender = event.getSender();
         try {
             if(task.length < 3 || task.length > 4){
@@ -183,7 +199,7 @@ public class BotMysql {
             ResultSet R = stmt.executeQuery(sql);
             String to = new String();//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
-                to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\t"+R.getString("mark")+"\n");
+                to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\n");
             }
             if(task.length == 4 && task[3].equals("public")){
                 GroupMessageEvent events = (GroupMessageEvent)event;
@@ -199,7 +215,7 @@ public class BotMysql {
         }
     }
 
-    void task_send(String[] task,AbstractMessageEvent event){
+    void task_send(String[] task,AbstractMessageEvent event){//send task to member
         User sender = event.getSender();
         if(event instanceof FriendMessageEvent){
             sender.sendMessage("Group only");
@@ -241,43 +257,105 @@ public class BotMysql {
         }
     }
 
-    void git_init(String[] in,AbstractMessageEvent event){
-        if(in.length != 3){
+    void sub_list(AbstractMessageEvent event){
+        try{
+            Group group = ((GroupMessageEvent)event).getGroup();
+            String msg = "";
+            for(int i=0;i<subweb.size();i++){
+                msg += String.valueOf(i)+"-"+subweb.get(i)+"\n";
+            }
+            group.sendMessage(msg);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_git_init(String[] in,AbstractMessageEvent event){
+        if(in.length != 4){
+            ((GroupMessageEvent)event).getGroup().sendMessage("sub git init failed");
             return;
         }
         try{
-            net.init(in[2]);
-            event.getGroup().sendMessage("git init complete");
-            subweb.add(in[2]);
+            if(in.length == 5){//input:/sub git init author repo
+                ((GroupMessageEvent)event).getGroup().sendMessage("sub git init success");
+                subweb.add(in[3]+"/"+in[4]);//add author and repo
+            }
         }catch(Exception e) {
             e.printStackTrace();
             return;
         }
     }
 
-    Boolean git_insertLastUpdate(String[] in,JSONObject jsonObj){//add last update time to table github
+    void sub_git_getUpdate(String[] in,AbstractMessageEvent event){//input:/sub git get id
+        Group group = ((GroupMessageEvent)event).getGroup();
         if(in.length != 4){
-            return false;
+            group.sendMessage("argement error");
+            return;
         }
         try{
+            String web = (String)subweb.get(Integer.parseInt(in[3]));
+            String time1 = git_getGithubTime(web.split("/"));
+            net.init("https://api.github.com/repos/"+web);
+            JSONObject tmpJson = net.GetURL();
+            if(tmpJson == null){
+                group.sendMessage("ERROR!");
+            }
+            String time2 = (String)(tmpJson.get("updated_at"));
+            if(time1.compareTo("") == 0){
+                int i = Integer.parseInt(in[3]);
+                net.init((String)subweb.get(i));
+                git_insertGithub(tmpJson);
+            }
+            if(time1.compareTo(time2) == 0){
+                group.sendMessage("Not update");
+            }
+            git_updateGithub(time2,web.split("/"));
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return;
+    }
+
+    void git_insertGithub(JSONObject jsonObj){//add last update time to table github
+        try{
             Statement stmt = conn.createStatement();
-            String sql = "insert into github values (0,'"+
-                in[0]+"','"+
-                in[1]+"','"+
-                in[2]+"','"+
-                in[3]+"','"+
-                in[4]+"','"+
+            String[] in = {
+                (String)jsonObj.get("svn_url"),
+                ((String)(jsonObj.get("full_name"))).split("/")[0],
+                (String)jsonObj.get("name"),
+                (String)jsonObj.get("updated_at"),
+                (String)jsonObj.get("description")
+            };
+            String sql = "insert into github values (0,'"+//id
+                in[0]+"','"+//url           --https://github.com/author/repo
+                in[1]+"','"+//owner         --author
+                in[2]+"','"+//repo          --repo
+                in[3]+"','"+//last_update   --date
+                in[4]+"','"+//info          --message
                 "')";
             stmt.execute(sql);
             stmt.close();
         }catch (Exception e) {
             e.printStackTrace();
-            return false;
+            return;
         }
-        return true;
+        return;
     }
 
-    String git_getLastUpdate(String[] git){//git last update time to table github
+    void git_updateGithub(String time,String[] in){
+        try{
+            Statement stmt = conn.createStatement();
+            String sql = "update table github set time = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
+            stmt.execute(sql);
+            stmt.close();
+        }catch (Exception e) {
+            e.printStackTrace();
+            return;
+        }
+        return;
+    }
+
+    String git_getGithubTime(String[] git){//git last update time to table github
         if(git.length != 2){
             System.out.println("输入参数过少或过多");
             return null;
