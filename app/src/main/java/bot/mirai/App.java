@@ -28,7 +28,7 @@ import net.mamoe.mirai.message.data.Message;
 import net.mamoe.mirai.contact.User;
 import net.mamoe.mirai.contact.Group;
 
-import com.alibaba.fastjson.*;
+import com.alibaba.fastjson.JSONArray;
 
 
 class BotMirai{
@@ -58,14 +58,14 @@ class BotMirai{
             //if(msg.contains("mirai:at:")){//Get QQ id
                 //System.out.println(msg.split("mirai:at:")[1].split("]")[0]);
             //}
-            //System.out.println(msg);
+            System.out.println(msg);
             //System.out.println(event.getMessage().contentToString());
+            Group group = event.getSubject();
             if(msg.charAt(0) == '/'){
-                Group group = event.getSubject();
                 if(msg.contains("task")){
-                    sql.switch(msg,event);
+                    sql.Bot_switch(msg,event);
                 }else if(msg.contains("sub")){
-                    sql.switch(msg,event);
+                    sql.Bot_switch(msg,event);
                 }else if(msg.contains("菜单")){
                     group.sendMessage(
                     "命令格式: \n"+
@@ -90,12 +90,12 @@ class BotMirai{
             String msg = event.getMessage().contentToString();
             //event.getSubject().sendMessage(String.valueOf(event.getTime()));
             //Friend fri = event.getFriend();
+            User friend = event.getSubject();
             if(msg.charAt(0) == '/'){
-                User friend = event.getSubject();
                 if(msg.contains("task")){
-                    sql.switch(msg,event);
+                    sql.Bot_switch(msg,event);
                 }else if(msg.contains("sub")){
-                    sql.switch(msg,event);
+                    sql.Bot_switch(msg,event);
                 }else if(msg.contains("菜单")){
                     friend.sendMessage(
                     "命令格式: \n"+
@@ -132,10 +132,10 @@ public class App {
         BotMirai Vector = new BotMirai();
         try{
             Class.forName("com.mysql.cj.jdbc.Driver");
-            Vector.listen();
-            //BotNet net = new BotNet("https://api.github.com/repos/yinlianlei/Bot");
-            //net.GetURL();
-            //System.out.println(net.jsonBot.toJSONString());
+            //Vector.listen();
+            //BotNet net = new BotNet("https://api.github.com/repos/yinlianlei/Bot/commits");
+            
+            //System.out.println(net.GetURL());
         }catch(Exception e){
             Vector.stop();
         }

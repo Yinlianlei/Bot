@@ -37,7 +37,7 @@ public class BotMysql {
         }
     }
 
-    void switch(String args,AbstractMessageEvent event){
+    void Bot_switch(String args,AbstractMessageEvent event){
         String[] in = args.split(" ");
         switch(in[0]){//command switch
             case "/task":switch(in[1]){//all test complete
@@ -61,16 +61,17 @@ public class BotMysql {
                     default:{
                         System.out.println("输入参数错误，请查看sub git help");
                     }
-                }
+                };break;
                 case "bili":switch(in[2]){
                     case "init":break;
                     default:{
                         System.out.println("输入参数错误，请查看sub bili help");
                     }
-                }
-                default:
+                };break;
+                default:{
                     System.out.println("输入参数错误，请查看sub help");
-            }
+                }
+            }break;
             default:
                 System.out.println("输入参数错误，请参考help");
         }
@@ -260,7 +261,7 @@ public class BotMysql {
     void sub_list(AbstractMessageEvent event){
         try{
             Group group = ((GroupMessageEvent)event).getGroup();
-            String msg = "";
+            String msg = new String("");
             for(int i=0;i<subweb.size();i++){
                 msg += String.valueOf(i)+"-"+subweb.get(i)+"\n";
             }
@@ -271,7 +272,7 @@ public class BotMysql {
     }
 
     void sub_git_init(String[] in,AbstractMessageEvent event){
-        if(in.length != 4){
+        if(in.length != 5){
             ((GroupMessageEvent)event).getGroup().sendMessage("sub git init failed");
             return;
         }
@@ -295,25 +296,39 @@ public class BotMysql {
         try{
             String web = (String)subweb.get(Integer.parseInt(in[3]));
             String time1 = git_getGithubTime(web.split("/"));
-            net.init("https://api.github.com/repos/"+web);
-            JSONObject tmpJson = net.GetURL();
-            if(tmpJson == null){
-                group.sendMessage("ERROR!");
-            }
-            String time2 = (String)(tmpJson.get("updated_at"));
+
             if(time1.compareTo("") == 0){
                 int i = Integer.parseInt(in[3]);
                 net.init((String)subweb.get(i));
+                JSONObject tmpJson = net.GetURL();
                 git_insertGithub(tmpJson);
+                return;
             }
+
+            net.init("https://api.github.com/repos/"+web);
+            JSONObject tmpJson = net.GetURL();
+
+            if(tmpJson == null){
+                group.sendMessage("ERROR!");
+            }
+
+            String time2 = tmpJson.getString("updated_at");
+
             if(time1.compareTo(time2) == 0){
                 group.sendMessage("Not update");
+                return;
             }
+
             git_updateGithub(time2,web.split("/"));
+
+            net.init("https://api.github.com/repos/"+web+"/commits?since="+time2);
+            tmpJson = net.GetURL();
+
+            group.sendMessage(time2);
+            net.Clear();
         }catch(Exception e){
             e.printStackTrace();
         }
-        return;
     }
 
     void git_insertGithub(JSONObject jsonObj){//add last update time to table github
@@ -331,8 +346,8 @@ public class BotMysql {
                 in[1]+"','"+//owner         --author
                 in[2]+"','"+//repo          --repo
                 in[3]+"','"+//last_update   --date
-                in[4]+"','"+//info          --message
-                "')";
+                in[4]+"')";//info          --message
+            //System.out.println(sql);
             stmt.execute(sql);
             stmt.close();
         }catch (Exception e) {
@@ -345,7 +360,7 @@ public class BotMysql {
     void git_updateGithub(String time,String[] in){
         try{
             Statement stmt = conn.createStatement();
-            String sql = "update table github set time = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
+            String sql = "update table github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
             stmt.execute(sql);
             stmt.close();
         }catch (Exception e) {
@@ -358,21 +373,21 @@ public class BotMysql {
     String git_getGithubTime(String[] git){//git last update time to table github
         if(git.length != 2){
             System.out.println("输入参数过少或过多");
-            return null;
+            return new String("");
         }
-        String lastUpdateTime = null;
+        String lastUpdateTime = new String("");
         try{
             Statement stmt = conn.createStatement();
             String sql = "select * from github where `owner` = '"+git[0]+"' and `repo` = '"+git[1]+"'";
             ResultSet re = stmt.executeQuery(sql);
             while(re.next()){
-                lastUpdateTime = re.getString("last_update");
+                lastUpdateTime += re.getString("last_update");
             }
             re.close();
             stmt.close();
         }catch (Exception e) {
             e.printStackTrace();
-            return null;
+            return new String("");
         }
         return lastUpdateTime;
     }

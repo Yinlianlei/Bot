@@ -13,6 +13,7 @@ public class BotNet {
     URL targetUrl = null;
     String target = null;
     JSONObject jsonBot = null;
+    //JSONArray jsonBotArray = null;
 
     BotNet() {
     };
@@ -26,8 +27,21 @@ public class BotNet {
         target = in;
     }
 
-    JSONObject getJSONObject(){
+    JSONObject getJSONObject(){//return JSONObject
         return jsonBot;
+    }
+
+    /*
+    //close this funtion for don't need it now;
+    JSONObject getJSONObject(int i){//return ith JSONObject
+        return jsonBotArray.getJSONObject(i);
+    }
+    */
+
+    void Clear(){
+        target = new String("");
+        jsonBot.clear();
+        //jsonBotArray.clear();
     }
 
     JSONObject GetURL() {// GET 方式进行操作
@@ -52,15 +66,14 @@ public class BotNet {
                 while (in.available() != 0) {
                     String tmp = new String(in.readAllBytes(),"utf8");
                     
-                    //System.out.println(tmp);
-                    //if(target.contains("git")){
-                    //    tmp = tmp.substring(1,tmp.length()-1);
-                    //}
-                    //else if(target.contains("bilibili")){
-                    //no operation
-                    //}
-                    //tmp = "{"+tmp+"}";
-                    jsonBot = JSON.parseObject(tmp);// 对目标返回json格式进行输出
+                    if(tmp.charAt(0) == '['){
+                        //tmp = "{\"result\":"+tmp+"}";
+                        JSONArray jsonBotArray = JSON.parseArray(tmp);
+                        jsonBot = jsonBotArray.getJSONObject(0);
+                        jsonBotArray.clear();//clear this variable for free memory and CPU
+                    }else{
+                        jsonBot = JSON.parseObject(tmp);// 对目标返回json格式进行输出
+                    }
                 }
                 //System.out.println(jsonBot.jsonObj);
                 in.close();
@@ -81,4 +94,14 @@ public class BotNet {
         //jsonBot = (JSONObject)(jsonBot.get("committer"));
         //System.out.println(jsonBot.toJSONString());
         //((String)jsonBot.get("date"));
+
+        //System.out.println(tmp);
+        //if(target.contains("git")){
+        //    tmp = tmp.substring(1,tmp.length()-1);
+        //}
+        //else if(target.contains("bilibili")){
+        //no operation
+        //}
+        //tmp = "{"+tmp+"}";
+        //if(tmp.charAt(0) == '['){
 */
