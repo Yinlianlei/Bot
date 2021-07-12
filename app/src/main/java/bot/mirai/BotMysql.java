@@ -25,13 +25,14 @@ public class BotMysql {
     private Connection conn = null;
     private BotNet net = null;
     private ArrayList subweb = null;
+    private ArrayList subbilibili = null;
 
     BotMysql() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
             conn = DriverManager.getConnection(url, user, password);// mysql连接
             net = new BotNet();
-            subweb = new ArrayList<String>();
+            subweb = git_subweb();
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -53,11 +54,12 @@ public class BotMysql {
                 }
             };break;
             case "/sub":switch(in[1]){//group list
-                case "list":sub_list(event);break;
                 case "git":switch(in[2]){
+                    case "list":sub_list(event);break;
                     case "init":sub_git_init(in,event);break;
                     case "get":sub_git_getUpdate(in,event);break;
-                    case "status":
+                    case "help":sub_git_help(event);break;
+                    case "remove":sub_git_remove(in,event);break;
                     default:{
                         System.out.println("输入参数错误，请查看sub git help");
                     }
@@ -258,14 +260,53 @@ public class BotMysql {
         }
     }
 
-    void sub_list(AbstractMessageEvent event){
+    void sub_git_list(AbstractMessageEvent event){
         try{
             Group group = ((GroupMessageEvent)event).getGroup();
-            String msg = new String("");
+            String msg = new String("list:");
             for(int i=0;i<subweb.size();i++){
-                msg += String.valueOf(i)+"-"+subweb.get(i)+"\n";
+                msg += "\n"+String.valueOf(i)+"-"+subweb.get(i);
             }
             group.sendMessage(msg);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_git_help(AbstractMessageEvent event){
+        try{
+            Group group = ((GroupMessageEvent)event).getGroup();
+            String msg = new String("sub git help\n"+
+            "sub git [option] <args>\n"+
+            "option:\n"+
+            "init   --"+
+            "get    --"+
+            "remove --"+
+            "list   --"
+            );
+            group.sendMessage(msg);
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_git_remove(String[] in,AbstractMessageEvent event){
+        Group group = ((GroupMessageEvent)event).getGroup();
+        if(in.length != 4){///sub git remove id
+            group.sendMessage("argement error");
+            return;
+        }
+        try{
+            Statement stmt = conn.createStatement();
+            int id = Integer.valueOf(in[3]);
+            String sql = new String("delete from github where `url` = 'https://github.com/"+subweb.get(id)+"'");
+            
+            stmt.execute(sql);
+
+            stmt.close();
+            
+            subweb.remove(id);
+            group.sendMessage("remove "+String.valueOf(id)+" success");
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -278,8 +319,8 @@ public class BotMysql {
         }
         try{
             if(in.length == 5){//input:/sub git init author repo
-                ((GroupMessageEvent)event).getGroup().sendMessage("sub git init success");
                 subweb.add(in[3]+"/"+in[4]);//add author and repo
+                ((GroupMessageEvent)event).getGroup().sendMessage("sub git init success"+String.valueOf(subweb.size()));
             }
         }catch(Exception e) {
             e.printStackTrace();
@@ -321,9 +362,9 @@ public class BotMysql {
 
             git_updateGithub(time2,web.split("/"));
 
-            System.out.println(time1+" "+time2);
+            //System.out.println(time1+" "+time2);
 
-            net.init("https://api.github.com/repos/"+web+"/commits?since="+time2);
+            net.init("https://api.github.com/repos/"+web+"/commits?since="+time1);
             tmpJson = net.GetURL();
 
             group.sendMessage(time2);
@@ -394,29 +435,22 @@ public class BotMysql {
         return lastUpdateTime;
     }
 
-    /*
-    MessageChain playerMsg(Long id){
-        MessageChain re = new PlainText("").plus(new PlainText(""));
-        try {
-            String sql =  "select * from playerInfo where `id` = "+id;
-            Statement statement = conn.createStatement();
-            ResultSet rs = statement.executeQuery(sql);
-            while(rs.next()) {
-                // 选择Name这列数据
-                String playerId = ((rs.getString("id")));
-                String playerNick = ((rs.getString("nick")));
-                re = re.plus(playerId).plus("-").plus(playerNick);
+    ArrayList git_subweb(){//init sub
+        ArrayList ret = new ArrayList<String>();
+        try{
+            Statement stmt = conn.createStatement();
+            String sql = "select * from github";
+            ResultSet re = stmt.executeQuery(sql);
+            while(re.next()){
+                ret.add(re.getString("owner")+"/"+re.getString("repo"));
             }
-            rs.close();
-            statement.close();
-        }
-        catch(SQLException e) {
+            re.close();
+            stmt.close();
+        }catch(Exception e){
             e.printStackTrace();
-        }finally{
-            return re;
         }
+        return ret;
     }
-    */
 
     void close_connect() {// 关闭连接
         try {

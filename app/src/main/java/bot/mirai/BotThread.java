@@ -16,7 +16,7 @@ public class BotThread extends Thread {
             try {nowTime = new Date();
                 System.out.println(i+format.format(nowTime));
                 System.out.println();
-                Thread.sleep(1000*60*30);
+                Thread.sleep(1000*60*60*24);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
