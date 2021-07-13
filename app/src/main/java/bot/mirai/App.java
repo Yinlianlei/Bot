@@ -58,7 +58,7 @@ class BotMirai{
             //if(msg.contains("mirai:at:")){//Get QQ id
                 //System.out.println(msg.split("mirai:at:")[1].split("]")[0]);
             //}
-            System.out.println(msg);
+            //System.out.println(msg);
             //System.out.println(event.getMessage().contentToString());
             Group group = event.getSubject();
             if(msg.charAt(0) == '/'){

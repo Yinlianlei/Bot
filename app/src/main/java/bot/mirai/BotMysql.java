@@ -26,6 +26,7 @@ public class BotMysql {
     private BotNet net = null;
     private ArrayList subweb = null;
     private ArrayList subbilibili = null;
+    private BotThread bt = null;
 
     BotMysql() {
         try {
@@ -118,7 +119,7 @@ public class BotMysql {
         "add [任务] <备注(可选)> --任务添加\n\t"+
         "comp [任务ID] --任务完成\n\t"+
         "del [任务ID] --任务删除\n\t"+
-        "send [QQ号] [任务] <备注(可选)> --发送任务给他人\n"
+        "send @[QQ号] [任务] <备注(可选)> --发送任务给他人\n"
         );
     }
 
@@ -167,7 +168,7 @@ public class BotMysql {
                 sender.sendMessage("ERROR 输入参数过少或过多");
                 return;
             }
-            String targetID = task[2];
+            String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
             Statement stmt = conn.createStatement();
             String sql = "select * from person_task where id = '"+targetID+"' and `mark` = 0";
             ResultSet R = stmt.executeQuery(sql);
@@ -261,6 +262,10 @@ public class BotMysql {
     }
 
     void sub_git_list(AbstractMessageEvent event){
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).sendMessage("Group only");
+            return;
+        }
         try{
             Group group = ((GroupMessageEvent)event).getGroup();
             String msg = new String("list:");
@@ -274,6 +279,10 @@ public class BotMysql {
     }
 
     void sub_git_help(AbstractMessageEvent event){
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).sendMessage("Group only");
+            return;
+        }
         try{
             Group group = ((GroupMessageEvent)event).getGroup();
             String msg = new String("sub git help\n"+
@@ -313,6 +322,10 @@ public class BotMysql {
     }
 
     void sub_git_init(String[] in,AbstractMessageEvent event){
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).sendMessage("Group only");
+            return;
+        }
         if(in.length != 5){
             ((GroupMessageEvent)event).getGroup().sendMessage("sub git init failed");
             return;
@@ -329,6 +342,10 @@ public class BotMysql {
     }
 
     void sub_git_getUpdate(String[] in,AbstractMessageEvent event){//input:/sub git get id
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).sendMessage("Group only");
+            return;
+        }
         Group group = ((GroupMessageEvent)event).getGroup();
         if(in.length != 4){
             group.sendMessage("argement error");
@@ -336,51 +353,54 @@ public class BotMysql {
         }
         try{
             String web = (String)subweb.get(Integer.parseInt(in[3]));
-            String time1 = git_getGithubTime(web.split("/"));
+            String time1 = git_getGithubTime(web.split("/"));//get the last updated time 
 
-            if(time1.compareTo("") == 0){
+            if(time1.compareTo("") == 0){//if havn't init the web
                 int i = Integer.parseInt(in[3]);
                 net.init((String)subweb.get(i));
                 JSONObject tmpJson = net.GetURL();
-                git_insertGithub(tmpJson);
+                git_insertGithub(tmpJson,String.valueOf(group.getId()));
+                group.sendMessage("init sub web success");
                 return;
             }
 
-            net.init("https://api.github.com/repos/"+web);
+            net.init("https://api.github.com/repos/"+web);//init sub web
             JSONObject tmpJson = net.GetURL();
 
             if(tmpJson == null){
                 group.sendMessage("ERROR!");
             }
 
-            String time2 = tmpJson.getString("updated_at");
+            String time2 = tmpJson.getString("updated_at");//get the newest update time
 
             if(time1.compareTo(time2) == 0){
                 group.sendMessage("Not update");
                 return;
             }
 
-            git_updateGithub(time2,web.split("/"));
+            git_updateGithub(time2,web.split("/"));//update
 
             //System.out.println(time1+" "+time2);
 
-            net.init("https://api.github.com/repos/"+web+"/commits?since="+time1);
-            tmpJson = net.GetURL();
+            //无意义
+            //net.init("https://api.github.com/repos/"+web+"/commits?since="+time1);
+            //tmpJson = net.GetURL();
 
-            group.sendMessage(time2);
+            group.sendMessage("最新更新时间"+time2);
             net.Clear();
         }catch(Exception e){
             e.printStackTrace();
         }
     }
 
-    void git_insertGithub(JSONObject jsonObj){//add last update time to table github
+    void git_insertGithub(JSONObject jsonObj,String group){//add last update time to table github
         try{
             Statement stmt = conn.createStatement();
             String[] in = {
                 (String)jsonObj.get("svn_url"),
                 ((String)(jsonObj.get("full_name"))).split("/")[0],
                 (String)jsonObj.get("name"),
+                group,
                 (String)jsonObj.get("updated_at"),
                 (String)jsonObj.get("description")
             };
@@ -388,8 +408,9 @@ public class BotMysql {
                 in[0]+"','"+//url           --https://github.com/author/repo
                 in[1]+"','"+//owner         --author
                 in[2]+"','"+//repo          --repo
-                in[3]+"','"+//last_update   --date
-                in[4]+"')";//info          --message
+                in[3]+"','"+//from          --groupId
+                in[4]+"','"+//last_update   --date
+                in[5]+"')";//info          --message
             //System.out.println(sql);
             stmt.execute(sql);
             stmt.close();
@@ -458,6 +479,37 @@ public class BotMysql {
         } catch (SQLException e) {
             e.printStackTrace();
         }
+    }
+
+    static ArrayList subThread(){
+        try{
+            ArrayList Re = new ArrayList<string>();
+            Statement stmt = conn.createStatement();
+            String sql = "select * from github";
+            ResultSet re = sql.executeQuery(sql);
+            while(re.next()){
+                Re.add(re.getString("owner")+"/"+re.getString("repo")+"-"+re.getString("last_update")+"-"+re.getString("from"));
+            }
+            re.close();
+            stmt.close();
+            for(int i=0;i<Re.size();i++){
+                String[] strArr = Re.get(i).split("-");
+                net.init("https://api.github.com/repos/"+strArr[0]);
+                JSONObject tmpJson = net.GetURL();
+                String time1 = strArr[1];
+                String time2 = tmpJson.getString("updated_at");
+                if(time1.compareTo(time2) != 0){
+                    Re.set(i,time2+":"+strArr[0]+"-"+strArr[2]);
+                }else{
+                    Re.set(i,"No update:"+strArr[0]+"-"+strArr[2]);
+                }
+                
+            }
+            return Re;
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return null;
     }
 }
 
