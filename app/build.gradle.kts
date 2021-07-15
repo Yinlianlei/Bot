@@ -15,6 +15,7 @@ plugins {
 }
 
 repositories {
+    mavenLocal()
     // Use JCenter for resolving dependencies.
     maven("https://maven.aliyun.com/repository/public") // 阿里云国内代理仓库
     //maven { url = uri("https://dl.bintray.com/karlatemp/misc") }
