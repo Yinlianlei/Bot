@@ -22,15 +22,15 @@ public class BotMysql {
     private final String url = "jdbc:mysql://47.102.215.193/JavaData?useSSL=true&characterEncoding=utf8";//若不设置encodoing则会导致输出为非中文字符
     private final String user = "huawei";
     private final String password = "huawei";
-    private Connection conn = null;
-    private BotNet net = null;
+    private static Connection conn = null;
+    private static BotNet net = null;
     private ArrayList subweb = null;
     private ArrayList subbilibili = null;
-    private BotThread bt = null;
 
     BotMysql() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
+            System.out.println("Mysql init finished.");
             conn = DriverManager.getConnection(url, user, password);// mysql连接
             net = new BotNet();
             subweb = git_subweb();
@@ -55,8 +55,8 @@ public class BotMysql {
                 }
             };break;
             case "/sub":switch(in[1]){//group list
-                case "git":switch(in[2]){
-                    case "list":sub_list(event);break;
+                case "git":switch(in[2]){//github subscribe
+                    case "list":sub_git_list(event);break;
                     case "init":sub_git_init(in,event);break;
                     case "get":sub_git_getUpdate(in,event);break;
                     case "help":sub_git_help(event);break;
@@ -65,7 +65,7 @@ public class BotMysql {
                         System.out.println("输入参数错误，请查看sub git help");
                     }
                 };break;
-                case "bili":switch(in[2]){
+                case "bili":switch(in[2]){//bilibili subscribe
                     case "init":break;
                     default:{
                         System.out.println("输入参数错误，请查看sub bili help");
@@ -261,9 +261,9 @@ public class BotMysql {
         }
     }
 
-    void sub_git_list(AbstractMessageEvent event){
+    void sub_git_list(AbstractMessageEvent event){//list the subcribed web for user
         if(event instanceof FriendMessageEvent){
-            ((GroupMessageEvent)event).sendMessage("Group only");
+            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
             return;
         }
         try{
@@ -278,9 +278,9 @@ public class BotMysql {
         }
     }
 
-    void sub_git_help(AbstractMessageEvent event){
+    void sub_git_help(AbstractMessageEvent event){//give the github subscribe for user
         if(event instanceof FriendMessageEvent){
-            ((GroupMessageEvent)event).sendMessage("Group only");
+            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
             return;
         }
         try{
@@ -299,7 +299,7 @@ public class BotMysql {
         }
     }
 
-    void sub_git_remove(String[] in,AbstractMessageEvent event){
+    void sub_git_remove(String[] in,AbstractMessageEvent event){//remove the subscribe web
         Group group = ((GroupMessageEvent)event).getGroup();
         if(in.length != 4){///sub git remove id
             group.sendMessage("argement error");
@@ -321,9 +321,9 @@ public class BotMysql {
         }
     }
 
-    void sub_git_init(String[] in,AbstractMessageEvent event){
+    void sub_git_init(String[] in,AbstractMessageEvent event){//init the subscribed web
         if(event instanceof FriendMessageEvent){
-            ((GroupMessageEvent)event).sendMessage("Group only");
+            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
             return;
         }
         if(in.length != 5){
@@ -343,7 +343,7 @@ public class BotMysql {
 
     void sub_git_getUpdate(String[] in,AbstractMessageEvent event){//input:/sub git get id
         if(event instanceof FriendMessageEvent){
-            ((GroupMessageEvent)event).sendMessage("Group only");
+            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
             return;
         }
         Group group = ((GroupMessageEvent)event).getGroup();
@@ -355,7 +355,7 @@ public class BotMysql {
             String web = (String)subweb.get(Integer.parseInt(in[3]));
             String time1 = git_getGithubTime(web.split("/"));//get the last updated time 
 
-            if(time1.compareTo("") == 0){//if havn't init the web
+            if(time1.isEmpty() == true){//if havn't init the web
                 int i = Integer.parseInt(in[3]);
                 net.init((String)subweb.get(i));
                 JSONObject tmpJson = net.GetURL();
@@ -421,7 +421,7 @@ public class BotMysql {
         return;
     }
 
-    void git_updateGithub(String time,String[] in){
+    void git_updateGithub(String time,String[] in){//get the last update time from mysql
         try{
             Statement stmt = conn.createStatement();
             String sql = "update github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
@@ -456,7 +456,7 @@ public class BotMysql {
         return lastUpdateTime;
     }
 
-    ArrayList git_subweb(){//init sub
+    ArrayList git_subweb(){//init subscribe
         ArrayList ret = new ArrayList<String>();
         try{
             Statement stmt = conn.createStatement();
@@ -481,29 +481,30 @@ public class BotMysql {
         }
     }
 
-    static ArrayList subThread(){
+    public static ArrayList subThread(){//static function for Thread
         try{
-            ArrayList Re = new ArrayList<string>();
+            ArrayList Re = new ArrayList<String>();
             Statement stmt = conn.createStatement();
             String sql = "select * from github";
-            ResultSet re = sql.executeQuery(sql);
+            ResultSet re = stmt.executeQuery(sql);
             while(re.next()){
-                Re.add(re.getString("owner")+"/"+re.getString("repo")+"-"+re.getString("last_update")+"-"+re.getString("from"));
+                Re.add(re.getString("owner")+"/"+re.getString("repo")+"*"+re.getString("last_update")+"*"+re.getString("from"));
             }
             re.close();
             stmt.close();
             for(int i=0;i<Re.size();i++){
-                String[] strArr = Re.get(i).split("-");
+                String[] strArr = String.valueOf(Re.get(i)).split("\\*");
                 net.init("https://api.github.com/repos/"+strArr[0]);
                 JSONObject tmpJson = net.GetURL();
                 String time1 = strArr[1];
                 String time2 = tmpJson.getString("updated_at");
                 if(time1.compareTo(time2) != 0){
-                    Re.set(i,time2+":"+strArr[0]+"-"+strArr[2]);
+                    Re.set(i,time2+":"+strArr[0]+"*"+strArr[2]);
                 }else{
-                    Re.set(i,"No update:"+strArr[0]+"-"+strArr[2]);
+                    Re.set(i,"No update:"+strArr[0]+"*"+strArr[2]);
                 }
-                
+                Thread.sleep(15000);//sleep for 15s
+                tmpJson.clear();
             }
             return Re;
         }catch(Exception e){

@@ -1,6 +1,9 @@
 package bot.mirai;
 
-import java.util.*;
+import java.util.Date;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.lang.Thread;
 import java.text.SimpleDateFormat;
 
@@ -11,32 +14,80 @@ public class BotThread extends Thread {
     private Date time1=null,time2=null;
     private long sleepTime=0;
     SimpleDateFormat format;
+    private static Boolean stop = false;
+    private HashMap groupMsg = null;
+    private Bot bot = null;
     BotThread() {//init
         format = new SimpleDateFormat ("yyyy.MM.dd hh:mm:ss");//init format
+        bot = Bot.getInstance(2683380854L);//get target Bot
+        groupMsg = new HashMap<String,ArrayList<String>>();
         daily_init();
+        System.out.println("Thread init finished.");
     };
 
     void daily_init(){
-        String[] t = format.format(new Date(time1.getTime()+24*60*60*1000)).split(" ");
-        time2 = format.parse(t[0]+" 07:00:00");//init send message time
-    }
-
-    void excute(Bot bot){
-        time1 = new Date();
-        if(time1.compareTo(time2) > 0){
-            daily_init();
-            Arraylist re = BotMirai.subThread();
-            for(int i=0;i<re.size();i++){
-                String[] strArr = re.get(i).split("-");//updateTime:owner/repo-groupId
-                Group group = bot.getGroupOrFail(Long.valueOf(strArr[1]));
-                group.sendMessage(strArr[0]);
+        try{
+            if(time1 == null){
+                time1 = new Date();
             }
-            Thread.sleep(15000);//sleep for 15s
+            String[] t = format.format(new Date(time1.getTime()+24*60*60*1000)).split(" ");
+            //String[] t = format.format(new Date(time1.getTime())).split(" ");
+            //time2 = format.parse(t[0]+" 07:00:00");//init send message time
+            time2 = format.parse(t[0]+" 7:00:00");//init send message time
+        }catch(Exception e){
+            e.printStackTrace();
         }
-        sleepTime = time2.getTime() - time1.getTime();
-        Thread.sleep(sleepTime);
     }
 
-    public void run() {
+    public void Stop(){
+        stop = true;
+        groupMsg.clear();
+        System.out.println("Stop thread");
+    }
+
+    public void run() {//once per subscribe web
+        try{
+            while(true){
+                if(stop == true){
+                    break;
+                }
+                time1 = new Date();
+                if(time1.compareTo(time2) > 0){
+                    ArrayList re = BotMysql.subThread();
+                    for(int i=0;i<re.size();i++){
+                        String[] strArr = String.valueOf(re.get(i)).split("\\*");//updateTime:owner/repo-groupId
+                        System.out.println(strArr[0]+" "+strArr[1]);
+                        if(!groupMsg.containsKey(strArr[1])){
+                            groupMsg.put(strArr[1],new ArrayList<String>());
+                        }
+                        //Group group = bot.getGroupOrFail(Long.valueOf(strArr[1]));
+                        //group.sendMessage(strArr[0]);
+                        ((ArrayList)groupMsg.get(strArr[1])).add(strArr[0]);
+                        //System.out.println("msg:"+strArr[0]);
+                        //Thread.sleep(1000);//sleep for 1s
+                    }
+                    Iterator it = groupMsg.keySet().iterator();
+                    String msg = new String("update:");
+                    while(it.hasNext()){
+                        String key = String.valueOf(it.next());
+                        ArrayList array = ((ArrayList)groupMsg.get(key));
+                        for(int i =0;i<re.size();i++){
+                            msg += "\n"+array.get(i);
+                        }
+                        Group group = bot.getGroupOrFail(Long.valueOf(key));
+                        group.sendMessage(msg);
+                    }
+                    daily_init();//BotActiveEvent
+                }
+                sleepTime = time2.getTime() - time1.getTime();
+                System.out.println("msg:sleep"+String.valueOf(sleepTime));
+                if(sleepTime < 0){
+                    continue;
+                }
+                Thread.sleep(sleepTime);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 }

@@ -16,6 +16,7 @@ public class BotNet {
     //JSONArray jsonBotArray = null;
 
     BotNet() {
+        System.out.println("Net init finished.");
     };
 
     BotNet(String target) {

@@ -19,6 +19,7 @@ import net.mamoe.mirai.event.events.GroupMessageEvent;
 import net.mamoe.mirai.event.events.MessageEvent;
 import net.mamoe.mirai.event.events.StrangerMessageEvent;
 import net.mamoe.mirai.event.events.TempMessageEvent;
+import net.mamoe.mirai.event.events.BotOnlineEvent;
 import net.mamoe.mirai.event.Listener;
 
 import net.mamoe.mirai.message.data.PlainText;
@@ -36,6 +37,7 @@ class BotMirai{
     private Listener listenerFriend;
     private Listener listenerGroup;
     private Listener listenerStranger;
+    private BotThread BT;//bot thread for daily subscribe
     private Bot bot;
     BotMirai(){
         bot = BotFactory.INSTANCE.newBot(2683380854L, "60746877hun", new BotConfiguration() {{
@@ -50,9 +52,18 @@ class BotMirai{
         }});
         bot.login();
 
+        BT = new BotThread();
         sql = new BotMysql();
+        BT.start();
     };
     void listen()throws Exception {
+        /* //failed
+        GlobalEventChannel.INSTANCE.subscribeOnce(BotOnlineEvent.class, event -> {
+            System.out.println("???");
+            System.out.println(event.getBot() instanceof Bot);
+        });
+        */
+        //System.out.println(Bot.getInstance(2683380854L) instanceof Bot);//get Bot
         listenerGroup = GlobalEventChannel.INSTANCE.subscribeAlways(GroupMessageEvent.class, event -> {
             String msg = event.getMessage().serializeToMiraiCode();
             //if(msg.contains("mirai:at:")){//Get QQ id
@@ -104,6 +115,8 @@ class BotMirai{
                     "/攻击 @玩家 [攻击某位玩家]\n"+
                     "/论道 @玩家 [和某位玩家论道]"
                     );
+                }else if(msg.contains("thread")){
+                    //thread start&interrupt
                 }else if(msg.contains("/交易")){
                     friend.sendMessage("未开放");
                 }else if(msg.contains("/技能")){
