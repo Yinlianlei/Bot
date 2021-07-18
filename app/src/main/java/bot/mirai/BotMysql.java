@@ -48,6 +48,23 @@ public class BotMysql {
         }
     }
 
+    final void errorMsg(Contact user,String id){
+        if(user instanceof Group){
+            user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).plus(new PlainText(" ERROR:输入参数过少或过多")));
+        }else{
+            user.sendMessage(" ERROR:输入参数过少或过多");
+        }
+    }
+
+    final void finishMsg(Contact user,String id,String msg){
+        if(user instanceof Group){
+            user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id)),
+            new PlainText(" "+msg)));
+        }else{
+            user.sendMessage(" "+msg);
+        }
+    }
+
     void Bot_switch(String[] in,AbstractMessageEvent event){
         switch(in[0]){//command switch
             case "/task":switch(in[1]){//all test complete
@@ -93,31 +110,49 @@ public class BotMysql {
     }
 
     void task_add(String[] task,AbstractMessageEvent event) {// 添加任务
-        User sender = event.getSender();
-        try {
-            if (task.length != 4){//判断如果输入参数不等于4便返回错误信息
-                sender.sendMessage("ERROR:输入参数过少或过多");
+        Contact user = null;
+        String targetID=null,targetNick=null,targetFrom=null,targetGroup=null;
+
+        if(event instanceof FriendMessageEvent){
+            user = (((FriendMessageEvent)event).getSender());
+
+            targetID = String.valueOf(user.getId());
+            targetNick = String.valueOf(((User)user).getNick());
+            targetGroup = "";
+            targetFrom = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            User sender = ((GroupMessageEvent)event).getSender();
+
+            targetID = String.valueOf(sender.getId());
+            targetNick = String.valueOf(sender.getNick());
+            targetGroup = String.valueOf(user.getId());
+            targetFrom = String.valueOf(sender.getId());
+        }
+
+        try {//task add title info
+            if (task.length != 3 && task.length != 4){//判断如果输入参数不等于4便返回错误信息
+                errorMsg(user,targetID);
                 return;
-            }
-            String targetID = String.valueOf(sender.getId()), targetNick = sender.getNick(),targetFrom = String.valueOf(sender.getId());
-            String targetGroup = "";
-            if(event instanceof GroupMessageEvent){
-                GroupMessageEvent events = (GroupMessageEvent)event;
-                targetGroup = String.valueOf(events.getGroup().getId());
             }
             Statement stmt = conn.createStatement();
             String sql = new String("insert into person_task values (" + "0" + ",'" + // 编号
                     targetID + "','" + // qq号
                     targetNick + "','" + // 昵称
                     targetGroup + "','" + // 发布任务群号
-                    targetFrom + "','"+
+                    targetFrom + "','"+//
                     task[2] + "','" + // 任务名
                     task[3] + // 备注
                     "',0)");
             // System.out.println(sql);//调试用
+
+            //((ArrayList)taskList.get(targetID)).add(task[2]+"-"+task[3]+"-0");
+            //task-note-mark
+            
             stmt.execute(sql);
             stmt.close();
-            event.getSender().sendMessage("task add success");
+            //event.getSender().sendMessage("task add success");
+            finishMsg(user,targetID,"task add success");
         } catch (Exception e) {
             event.getSender().sendMessage("task add faild");
             e.printStackTrace();
@@ -136,119 +171,170 @@ public class BotMysql {
     }
 
     void task_comp(String[] task,AbstractMessageEvent event){//完成任务
-        try {
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        try {//task comp id
             if (task.length != 3){//判断如果输入参数不等于4便返回错误信息
-                event.getSender().sendMessage("ERROR:输入参数过少或过多");
+                errorMsg(user,id);
                 return;
             }
+
             String targetID = task[2];
             Statement stmt = conn.createStatement();
             String sql = new String("update person_task set mark = 1 where num ="+targetID);
             // System.out.println(sql);//调试用
+
+            //((ArrayList)taskList.get(id)).remove(Integer.valueOf(targetID));
+
             stmt.execute(sql);
             stmt.close();
-            event.getSender().sendMessage("task complete success");
+            finishMsg(user,id,"task complete success");
         } catch (Exception e) {
-            event.getSender().sendMessage("task complete faild");
+            finishMsg(user,id,"task complete faild");
             e.printStackTrace();
         }
     }
 
     void task_del(String[] task,AbstractMessageEvent event){//删除目标指定编号的任务
-        try {
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        try {//task del id
             if (task.length != 3){//判断如果输入参数不等于4便返回错误信息
-                event.getSender().sendMessage("ERROR:输入参数过少或过多");
+                errorMsg(user,id);
                 return;
             }
             String targetID = task[2];
             Statement stmt = conn.createStatement();
-            String sql = new String("delete from person_task where num = "+targetID);
+            String sql = new String("delete from person_task where `num` = "+targetID);
             // System.out.println(sql);//调试用
+
+            //((ArrayList)taskList.get(id)).remove(Integer.valueOf(targetID));
+
             stmt.execute(sql);
             stmt.close();
-            event.getSender().sendMessage("task delete success");
+            finishMsg(user,id,"task delete success");
         } catch (Exception e) {
-            event.getSender().sendMessage("task delete faild");
+            finishMsg(user,id,"task delete faild");
             e.printStackTrace();
         }
     }
 
     void task_list(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
-        User sender = event.getSender();
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
         try {
-            if(task.length < 3 || task.length > 4){
-                sender.sendMessage("ERROR 输入参数过少或过多");
+            if(task.length != 3 && task.length != 4){
+                errorMsg(user,id);
                 return;
             }
+
+            //String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
+            
             String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
             Statement stmt = conn.createStatement();
-            String sql = new String("select * from person_task where id = '"+targetID+"' and `mark` = 0");
+            String sql = new String("select * from person_task where `id` = '"+targetID+"' and `mark` = 0");
             ResultSet R = stmt.executeQuery(sql);
             String to = new String("");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
                 to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\n");
             }
-            if(task.length == 4 && task[3].equals("public")){
-                GroupMessageEvent events = (GroupMessageEvent)event;
-                events.getGroup().sendMessage(to);
+
+            if(task.length == 4 && task[3].equals("public")){//task list public
+                user.sendMessage(to);
             }else if(task.length == 3 || (task.length == 4 && task[3].equals("private"))){
-                sender.sendMessage(to);
+                user.sendMessage(to);
             }
             stmt.close();
-            System.out.println("task show success");
+            //finishMsg(user,id,"task show success");
         } catch (Exception e) {
-            System.out.println("task delete faild");
+            finishMsg(user,id,"task delete faild");
             e.printStackTrace();
         }
     }
 
     void task_listC(String[] task,AbstractMessageEvent event){//展示目标账户所分配的任务
-        User sender = event.getSender();
-        try {
-            if(task.length < 3 || task.length > 4){
-                sender.sendMessage("ERROR 输入参数过少或过多");
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        try { //task list @target public
+            if(task.length != 3 && task.length != 4){
+                errorMsg(user,id);
                 return;
             }
-            String targetID = task[2];
+            String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
             Statement stmt = conn.createStatement();
             String sql = new String("select * from person_task where id = '"+targetID+"' and `mark` = 1");
             ResultSet R = stmt.executeQuery(sql);
-            String to = new String();//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
+            String to = new String("list:\n");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
                 to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\n");
             }
             if(task.length == 4 && task[3].equals("public")){
-                GroupMessageEvent events = (GroupMessageEvent)event;
-                events.getGroup().sendMessage(to);
+                user.sendMessage(to);
             }else if(task.length == 3 || (task.length == 4 && task[3].equals("private"))){
-                sender.sendMessage(to);
+                user.sendMessage(to);
             }
             stmt.close();
-            System.out.println("task show success");
+            //finishMsg(user,id,"task show success");
         } catch (Exception e) {
-            System.out.println("task delete faild");
+            finishMsg(user,id,"task delete faild");
             e.printStackTrace();
         }
     }
 
     void task_send(String[] task,AbstractMessageEvent event){//send task to member
-        User sender = event.getSender();
+        Contact user = null;
+        String id = null;
+        String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0], 
+            targetNick = null, targetGroup = null,targetNote=null,targetFrom = null;
         if(event instanceof FriendMessageEvent){
-            sender.sendMessage("Group only");
-            return;
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+
+            User sender = ((GroupMessageEvent)event).getSender();
+            targetNick = sender.getNick();
+            targetGroup = String.valueOf(user.getId());
+            targetFrom = String.valueOf(sender.getId());
         }
-        try {
-            if(task.length < 4 || task.length > 5){
-                sender.sendMessage("输入参数过少或过多");
+        
+        try {//task send @target title note
+            if(task.length != 4 && task.length != 5){
+                errorMsg(user,id);
                 return;
-            }
-            GroupMessageEvent events = (GroupMessageEvent)event;
-            String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0], 
-            targetNick = "", targetGroup = "",targetNote="",targetFrom = "";
-            if(event instanceof GroupMessageEvent){
-                targetNick = events.getGroup().getOrFail(Long.valueOf(targetID)).getNick();
-                targetGroup = String.valueOf(events.getGroup().getId());
-                targetFrom = String.valueOf(sender.getId());
             }
             
             if(task.length == 5){
@@ -266,9 +352,9 @@ public class BotMysql {
                     "',0)");
             stmt.execute(sql);
             stmt.close();
-            sender.sendMessage("task send success");
+            finishMsg(user,id,"task send success");
         } catch (Exception e) {
-            sender.sendMessage("task send faild");
+            finishMsg(user,id,"task send faild");
             e.printStackTrace();
         }
     }
@@ -528,7 +614,7 @@ public class BotMysql {
         return null;
     }
 
-    HashMap bili_sub(){
+    HashMap bili_sub(){//init bili subscribe
         try{
             HashMap ret = new HashMap<String,ArrayList<String>>();
             Statement stmt = conn.createStatement();
@@ -626,7 +712,7 @@ public class BotMysql {
         }
     }
 
-    void sub_bili_help(AbstractMessageEvent event){
+    void sub_bili_help(AbstractMessageEvent event){//for help
         Contact user = null;
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
@@ -638,18 +724,18 @@ public class BotMysql {
                 user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus(" bilibili Up subscribe help:\n"+
                 "sub bili [option] <args>:\n"+
                 "options:\n"+
-                "init       --"+
-                "list       --"+
-                "help       --"+
-                "remove     --"));
+                "init       --\n"+
+                "list       --\n"+
+                "help       --\n"+
+                "remove     --\n"));
             }else{
                 user.sendMessage("bilibili Up subscribe help:\n"+
                 "sub bili [option] <args>:\n"+
                 "options:\n"+
-                "init       --"+
-                "list       --"+
-                "help       --"+
-                "remove     --");
+                "init       --\n"+
+                "list       --\n"+
+                "help       --\n"+
+                "remove     --\n");
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -700,7 +786,7 @@ public class BotMysql {
         }
         try{//sub bili get
             Statement stmt = conn.createStatement();
-            String sql = new String("select * from bili where `subFrom` = '"+id+"' and `UserOfGroup` = "+(user instanceof Group?user.getId():"0"));
+            String sql = new String("select * from bili where `subFrom` = '"+id+"' and `UserOrGroup` = "+(user instanceof Group?user.getId():"0"));
             
             ResultSet re = stmt.executeQuery(sql);
             ArrayList ret = new ArrayList<String>();
@@ -762,8 +848,49 @@ public class BotMysql {
         }
     }
 
-    public static void biliThread(){
+    public static void biliUpdateThread(){//for thread to update data
+        try{
+            Statement stmt = conn.createStatement();
+            String sql = new String("select * from bili");
+            ResultSet re = stmt.executeQuery(sql);
+            ArrayList updateList = new ArrayList<String>();//update up list
+            while(re.next()){
+                updateList.add(re.getString("name")+"-"+re.getString("uid")+"-"+
+                    re.getString("views")+"-"+re.getString("latestTitle"));
+            }//name-uid-viewCount-latestTitle
+            re.close();
 
+            for(int i = 0;i<updateList.size();i++){
+                String[] list = ((String)updateList.get(i)).split("-");
+                net.init("https://api.bilibili.com/x/space/arc/search?mid="+list[1]+"&pn=1&ps=1&jsonp=jsonp");
+                JSONObject tmpJson = net.GetURL();
+                tmpJson = tmpJson.getJSONObject("data");
+
+                int newCount = tmpJson.getJSONObject("page").getIntValue("count");
+
+                if(newCount <= Integer.valueOf(list[2])){
+                    continue;
+                }
+
+                tmpJson = tmpJson.getJSONObject("list").getJSONArray("vlist").getJSONObject(0);
+                String newViewTitle = tmpJson.getString("title");
+                String newViewBv = tmpJson.getString("bvid");
+
+                sql = new String("update bili set `views` = "+newCount+
+                    ",`latestView` = '"+newViewBv+
+                    "',`latestTitle` = '"+newViewTitle+"' where `uid` = '"+
+                    list[1]+"'");
+
+                stmt.execute(sql);
+            }
+
+            //net.init("https://api.bilibili.com/x/space/arc/search?mid="+in[3]+"&pn=1&ps=3&jsonp=jsonp");//init sub web
+            //JSONObject tmpJson = net.GetURL();
+
+            //sub:[name*uid*views*latestView*latestTitle*subFrom*UserOfGroup]
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
 }

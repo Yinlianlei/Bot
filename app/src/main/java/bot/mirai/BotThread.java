@@ -15,7 +15,7 @@ import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.contact.Group;
 
 public class BotThread extends Thread {
-    private Date time1=null,time2=null;
+    private Date time1=null,time2=null,time3=null;
     private long sleepTime=0;
     SimpleDateFormat format;
     private static Boolean stop = false;
@@ -25,11 +25,12 @@ public class BotThread extends Thread {
         format = new SimpleDateFormat ("yyyy.MM.dd hh:mm:ss");//init format
         bot = Bot.getInstance(2683380854L);//get target Bot
         groupMsg = new HashMap<String,ArrayList<String>>();
-        daily_init();
+        time2_init();
+        time3_init();
         System.out.println("Thread init finished.");
     };
 
-    void daily_init(){
+    void time2_init(){
         try{
             if(time1 == null){
                 time1 = new Date();
@@ -38,6 +39,17 @@ public class BotThread extends Thread {
             //String[] t = format.format(new Date(time1.getTime())).split(" ");
             //time2 = format.parse(t[0]+" 07:00:00");//init send message time
             time2 = format.parse(t[0]+" 7:00:00");//init send message time
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void time3_init(){
+        try{
+            if(time1 == null){
+                time1 = new Date();
+            }
+            time3 = new Date(time1.getTime()+3*60*60*1000);//init send message time
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -69,7 +81,7 @@ public class BotThread extends Thread {
                     break;
                 }
                 time1 = new Date();
-                if(time1.compareTo(time2) > 0){
+                if(time1.compareTo(time2) > 0){//rewrite
                     ArrayList re = BotMysql.subThread();
                     for(int i=0;i<re.size();i++){
                         String[] strArr = String.valueOf(re.get(i)).split("\\*");//updateTime:owner/repo-groupId
@@ -94,10 +106,14 @@ public class BotThread extends Thread {
                         Group group = bot.getGroupOrFail(Long.valueOf(key));
                         group.sendMessage(msg);
                     }
-                    daily_init();//BotActiveEvent
+                    time2_init();//BotActiveEvent
                 }
-                sleepTime = time2.getTime() - time1.getTime();
-                System.out.println("msg:sleep"+String.valueOf(sleepTime));
+                if(time1.compareTo(time3) > 0){
+                    BotMysql.biliUpdateThread();
+                }
+                sleepTime = time3.getTime() - time1.getTime();
+
+                System.out.println("latest-Thread-msg:sleep time:"+String.valueOf(sleepTime));
                 if(sleepTime < 0){
                     continue;
                 }
