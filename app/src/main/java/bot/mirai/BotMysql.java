@@ -48,6 +48,14 @@ public class BotMysql {
         }
     }
 
+    void close_connect() {// 关闭连接
+        try {
+            conn.close();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
     final void errorMsg(Contact user,String id){
         if(user instanceof Group){
             user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).plus(new PlainText(" ERROR:输入参数过少或过多")));
@@ -69,7 +77,7 @@ public class BotMysql {
         switch(in[0]){//command switch
             case "/task":switch(in[1]){//all test complete
                 case "add":task_add(in,event);break;
-                case "del":task_del(in,event);break;
+                case "remove":task_del(in,event);break;
                 case "list":task_list(in,event);break;
                 case "send":task_send(in,event);break;
                 case "comp":task_comp(in,event);break;
@@ -160,12 +168,19 @@ public class BotMysql {
     }
 
     void task_help(AbstractMessageEvent event){//显示帮助
-        event.getSender().sendMessage("task任务添加帮助：\n"+
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        
+        user.sendMessage("task任务添加帮助：\n"+
         "task [option] <args...>\n"+
         "option:\n\t"+
         "add [任务] <备注(可选)> --任务添加\n\t"+
         "comp [任务ID] --任务完成\n\t"+
-        "del [任务ID] --任务删除\n\t"+
+        "remove [任务ID] --任务删除\n\t"+
         "send @[QQ号] [任务] <备注(可选)> --发送任务给他人\n"
         );
     }
@@ -247,18 +262,26 @@ public class BotMysql {
         }
 
         try {
-            if(task.length != 3 && task.length != 4){
+            if(task.length != 2 && task.length != 3 && task.length != 4){
                 errorMsg(user,id);
                 return;
             }
 
+            String to = new String("");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
+            String targetID = null;
+
             //String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
             
-            String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
+            if(task.length != 2){
+                targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
+            }else{
+                targetID = id;
+            }
             Statement stmt = conn.createStatement();
+
             String sql = new String("select * from person_task where `id` = '"+targetID+"' and `mark` = 0");
             ResultSet R = stmt.executeQuery(sql);
-            String to = new String("");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
+            
             while(R.next()){
                 to += (R.getString("num")+"\t"+R.getString("id")+"\t"+R.getString("nick")+"\t"+R.getString("group")+"\t"+R.getString("fromId")+"\t"+R.getString("task")+"\t"+R.getString("note")+"\n");
             }
@@ -266,6 +289,8 @@ public class BotMysql {
             if(task.length == 4 && task[3].equals("public")){//task list public
                 user.sendMessage(to);
             }else if(task.length == 3 || (task.length == 4 && task[3].equals("private"))){
+                user.sendMessage(to);
+            }else{
                 user.sendMessage(to);
             }
             stmt.close();
@@ -288,11 +313,18 @@ public class BotMysql {
         }
 
         try { //task list @target public
-            if(task.length != 3 && task.length != 4){
+            if(task.length != 2 && task.length != 3 && task.length != 4){
                 errorMsg(user,id);
                 return;
             }
-            String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
+            
+            String targetID = null;
+            
+            if(task.length !=2)
+                targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
+            else
+                targetID = id;
+            
             Statement stmt = conn.createStatement();
             String sql = new String("select * from person_task where id = '"+targetID+"' and `mark` = 1");
             ResultSet R = stmt.executeQuery(sql);
@@ -569,14 +601,6 @@ public class BotMysql {
             e.printStackTrace();
         }
         return ret;
-    }
-
-    void close_connect() {// 关闭连接
-        try {
-            conn.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     public static ArrayList subThread(){//static function for Thread
