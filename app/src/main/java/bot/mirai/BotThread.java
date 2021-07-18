@@ -7,6 +7,10 @@ import java.util.Iterator;
 import java.lang.Thread;
 import java.text.SimpleDateFormat;
 
+import net.mamoe.mirai.event.events.GroupMessageEvent;
+import net.mamoe.mirai.event.events.AbstractMessageEvent;
+import net.mamoe.mirai.event.events.FriendMessageEvent;
+
 import net.mamoe.mirai.Bot;
 import net.mamoe.mirai.contact.Group;
 
@@ -34,6 +38,19 @@ public class BotThread extends Thread {
             //String[] t = format.format(new Date(time1.getTime())).split(" ");
             //time2 = format.parse(t[0]+" 07:00:00");//init send message time
             time2 = format.parse(t[0]+" 7:00:00");//init send message time
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void getSleepTime(AbstractMessageEvent event){
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).getSubject().sendMessage("Group only");
+            return;
+        }
+        Group group = ((GroupMessageEvent)event).getSubject();
+        try{
+            group.sendMessage("sleepTime:"+String.valueOf(sleepTime));
         }catch(Exception e){
             e.printStackTrace();
         }

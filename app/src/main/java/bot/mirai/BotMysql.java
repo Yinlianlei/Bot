@@ -7,15 +7,21 @@ import com.alibaba.fastjson.JSONArray;
 import java.sql.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import net.mamoe.mirai.message.data.PlainText;
+import net.mamoe.mirai.message.data.MessageUtils;
 import net.mamoe.mirai.message.data.MessageChain;
+import net.mamoe.mirai.message.data.At;
 import net.mamoe.mirai.message.data.Message;
 
 import net.mamoe.mirai.event.events.AbstractMessageEvent;
 import net.mamoe.mirai.event.events.FriendMessageEvent;
 import net.mamoe.mirai.event.events.GroupMessageEvent;
+import net.mamoe.mirai.event.events.UserMessageEvent;
 import net.mamoe.mirai.contact.User;
+import net.mamoe.mirai.contact.Contact;
 import net.mamoe.mirai.contact.Group;
 
 public class BotMysql {
@@ -25,22 +31,24 @@ public class BotMysql {
     private static Connection conn = null;
     private static BotNet net = null;
     private ArrayList subweb = null;
-    private ArrayList subbilibili = null;
+    private HashMap sub_bili = null;
 
     BotMysql() {
         try {
             Class.forName("com.mysql.cj.jdbc.Driver");
-            System.out.println("Mysql init finished.");
+            
             conn = DriverManager.getConnection(url, user, password);// mysql连接
             net = new BotNet();
             subweb = git_subweb();
+            sub_bili = bili_sub();
+
+            System.out.println("Mysql init finished.");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    void Bot_switch(String args,AbstractMessageEvent event){
-        String[] in = args.split(" ");
+    void Bot_switch(String[] in,AbstractMessageEvent event){
         switch(in[0]){//command switch
             case "/task":switch(in[1]){//all test complete
                 case "add":task_add(in,event);break;
@@ -66,7 +74,10 @@ public class BotMysql {
                     }
                 };break;
                 case "bili":switch(in[2]){//bilibili subscribe
-                    case "init":break;
+                    case "init":sub_bili_init(in,event);break;
+                    case "help":sub_bili_help(event);break;
+                    case "list":sub_bili_list(event);break;
+                    case "remove":sub_bili_remove(in,event);break;
                     default:{
                         System.out.println("输入参数错误，请查看sub bili help");
                     }
@@ -261,6 +272,26 @@ public class BotMysql {
         }
     }
 
+    void sub_git_init(String[] in,AbstractMessageEvent event){//init the subscribed web
+        if(event instanceof FriendMessageEvent){
+            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
+            return;
+        }
+        if(in.length != 5){
+            ((GroupMessageEvent)event).getGroup().sendMessage("sub git init failed");
+            return;
+        }
+        try{
+            if(in.length == 5){//input:/sub git init author repo
+                subweb.add(in[3]+"/"+in[4]);//add author and repo
+                ((GroupMessageEvent)event).getGroup().sendMessage("sub git init success"+String.valueOf(subweb.size()));
+            }
+        }catch(Exception e) {
+            e.printStackTrace();
+            return;
+        }
+    }
+
     void sub_git_list(AbstractMessageEvent event){//list the subcribed web for user
         if(event instanceof FriendMessageEvent){
             ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
@@ -318,26 +349,6 @@ public class BotMysql {
             group.sendMessage("remove "+String.valueOf(id)+" success");
         }catch(Exception e){
             e.printStackTrace();
-        }
-    }
-
-    void sub_git_init(String[] in,AbstractMessageEvent event){//init the subscribed web
-        if(event instanceof FriendMessageEvent){
-            ((GroupMessageEvent)event).getGroup().sendMessage("Group only");
-            return;
-        }
-        if(in.length != 5){
-            ((GroupMessageEvent)event).getGroup().sendMessage("sub git init failed");
-            return;
-        }
-        try{
-            if(in.length == 5){//input:/sub git init author repo
-                subweb.add(in[3]+"/"+in[4]);//add author and repo
-                ((GroupMessageEvent)event).getGroup().sendMessage("sub git init success"+String.valueOf(subweb.size()));
-            }
-        }catch(Exception e) {
-            e.printStackTrace();
-            return;
         }
     }
 
@@ -491,7 +502,7 @@ public class BotMysql {
                 Re.add(re.getString("owner")+"/"+re.getString("repo")+"*"+re.getString("last_update")+"*"+re.getString("from"));
             }
             re.close();
-            stmt.close();
+            
             for(int i=0;i<Re.size();i++){
                 String[] strArr = String.valueOf(Re.get(i)).split("\\*");
                 net.init("https://api.github.com/repos/"+strArr[0]);
@@ -500,18 +511,190 @@ public class BotMysql {
                 String time2 = tmpJson.getString("updated_at");
                 if(time1.compareTo(time2) != 0){
                     Re.set(i,time2+":"+strArr[0]+"*"+strArr[2]);
+                    sql = "update github set `last_update` = '"+time2+"' where `owner` = '"+strArr[0].split("/")[0]+"' and `repo` = '"+strArr[0].split("/")[1]+"'";
+                    stmt.execute(sql);
                 }else{
                     Re.set(i,"No update:"+strArr[0]+"*"+strArr[2]);
                 }
-                Thread.sleep(15000);//sleep for 15s
+                Thread.sleep(10000);//sleep for 10s for github api
                 tmpJson.clear();
             }
+            stmt.close();
             return Re;
         }catch(Exception e){
             e.printStackTrace();
         }
         return null;
     }
+
+    HashMap bili_sub(){
+        try{
+            HashMap ret = new HashMap<String,ArrayList<String>>();
+            Statement stmt = conn.createStatement();
+            String sql = new String("select * from bili");
+            ResultSet re = stmt.executeQuery(sql);
+            while(re.next()){
+                String sub = re.getString("subFrom");
+                if(!ret.containsKey(sub)){
+                    ret.put(sub,new ArrayList<String>());
+                }
+                ((ArrayList)ret.get(sub)).add(re.getString("uid")+"*"+re.getString("views")+"*"+re.getString("latestView")+"*"+re.getString("subFrom"));
+                //sub:["uid*views*latestView*subFrom"]
+            }
+            re.close();
+            stmt.close();
+            return ret;
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    void sub_bili_init(String[] in,AbstractMessageEvent event){//init subscribe bilibili
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        try{//sub bili init uid:return UpNick/UpUid
+            net.init("https://api.bilibili.com/x/space/arc/search?mid="+in[3]+"&pn=1&ps=3&jsonp=jsonp");//init sub web
+            JSONObject tmpJson = net.GetURL();
+            
+            tmpJson = tmpJson.getJSONObject("data");
+
+            int viewsCount = tmpJson.getJSONObject("page").getIntValue("count");
+            tmpJson = tmpJson.getJSONObject("list").getJSONArray("vlist").getJSONObject(0);
+            String subId = String.valueOf(user.getId());
+            String bv = tmpJson.getString("bvid");
+
+            Statement stmt = conn.createStatement();
+            String sql = "insert into bili values (0,'"+ //id
+            in[3]+"',"+                                //uid
+            viewsCount+",'"+                           //views count
+            bv+"','"+                  //latest Bv
+            subId+"',"+         //sub id
+            String.valueOf(event instanceof FriendMessageEvent?0:1)+   //0:Friend,1:Group
+            ")";
+            //System.out.println(sql);
+            stmt.execute(sql);
+            stmt.close();
+            if(!sub_bili.containsKey(subId)){
+                System.out.println("Not contain");
+                sub_bili.put(subId,new ArrayList<String>());
+            }
+            ((ArrayList)sub_bili.get(subId)).add(in[3]+"*"+viewsCount+"*"+bv+"*"+subId);//add subscribe up
+            //sub:["uid*views*latestView*subFrom"]
+            if(user instanceof Group){
+                //MessageUtils.newChain(MessageUtils.newChain("Hello"), Image.fromId("{f8f1ab55-bf8e-4236-b55e-955848d7069f}.png"));
+                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus(new PlainText(":"+tmpJson.getString("author")+"/"+tmpJson.getString("mid"))));
+            }else{
+                user.sendMessage("sub Up:"+tmpJson.getString("author")+"/"+tmpJson.getString("mid"));
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_bili_help(AbstractMessageEvent event){
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        try{
+            if(user instanceof Group){
+                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus("bilibili Up subscribe help:\n"+
+                "sub bili [option] <args>:\n"+
+                "options:\n"+
+                "init       --"+
+                "list       --"+
+                "help       --"+
+                "remove     --"));
+            }else{
+                user.sendMessage("bilibili Up subscribe help:\n"+
+                "sub bili [option] <args>:\n"+
+                "options:\n"+
+                "init       --"+
+                "list       --"+
+                "help       --"+
+                "remove     --");
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_bili_list(AbstractMessageEvent event){//list the subsrcibe bili list
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        try{
+            String msg = new String("list:");
+            Iterator it = sub_bili.keySet().iterator();
+            while(it.hasNext()){
+                String key = String.valueOf(it.next());
+                ArrayList<String> re = (ArrayList)sub_bili.get(key);
+                for(int i =0;i<re.size();i++){
+                    //System.out.println(re.get(i));
+                    msg += "\n"+re.get(i);
+                }
+            }
+            if(user instanceof Group){
+                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId()),new PlainText(msg)));
+            }else{
+                user.sendMessage(msg);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_bili_get(String[] in,AbstractMessageEvent event){
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        try{
+            
+            Statement stmt = conn.createStatement();
+            String sql = new String("delete from bili where `id` = '"+in[3]+"'");
+            
+            stmt.execute(sql);
+            user.sendMessage("Remove success");
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void sub_bili_remove(String[] in,AbstractMessageEvent event){//remove the subscribed up
+        Contact user = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+        }
+        try{//sub bili remove uid
+            Statement stmt = conn.createStatement();
+            String sql = new String("delete from bili where `id` = '"+in[3]+"'");
+            stmt.execute(sql);
+            sub_bili.remove(in[3]);
+            if(user instanceof Group){
+                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId()),new PlainText("Remove success")));
+            }else{
+                user.sendMessage("Remove success");
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
 }
 
 /*
@@ -530,7 +713,7 @@ class BotMysql{
     };
 
     MessageChain playerMsg(Long id){
-        MessageChain re = new PlainText("").plus(new PlainText(""));
+        MessageChain re = MessageUtils.newChain("").plus(MessageUtils.newChain(""));
         try {
             String sql =  "select * from player where `id` = "+id;
             Statement statement = conn.createStatement();

@@ -73,26 +73,13 @@ class BotMirai{
             //System.out.println(event.getMessage().contentToString());
             Group group = event.getSubject();
             if(msg.charAt(0) == '/'){
-                if(msg.contains("task")){
-                    sql.Bot_switch(msg,event);
-                }else if(msg.contains("sub")){
-                    sql.Bot_switch(msg,event);
-                }else if(msg.contains("菜单")){
-                    group.sendMessage(
-                    "命令格式: \n"+
-                    "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
-                    "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
-                    "/攻击 @玩家 [攻击某位玩家]\n"+
-                    "/论道 @玩家 [和某位玩家论道]"
-                    );
-                }else if(msg.contains("/交易")){
-                    group.sendMessage("未开放");
-                }else if(msg.contains("/技能")){
-                    group.sendMessage("未开放");
-                }else if(msg.contains("/攻击")){
-                    group.sendMessage("未开放");
-                }else if(msg.contains("/论道")){
-                    group.sendMessage("未开放");
+                String[] in = msg.split(" ");
+                if(in[0].contains("task")){
+                    sql.Bot_switch(in,event);
+                }else if(in[0].contains("sub")){
+                    sql.Bot_switch(in,event);
+                }else if(in[0].compareTo("/stop") == 0){
+                    BT.Stop();
                 }
                 
             }
@@ -103,29 +90,11 @@ class BotMirai{
             //Friend fri = event.getFriend();
             User friend = event.getSubject();
             if(msg.charAt(0) == '/'){
+                String[] in = msg.split(" ");
                 if(msg.contains("task")){
-                    sql.Bot_switch(msg,event);
-                }else if(msg.contains("sub")){
-                    sql.Bot_switch(msg,event);
-                }else if(msg.contains("菜单")){
-                    friend.sendMessage(
-                    "命令格式: \n"+
-                    "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
-                    "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
-                    "/攻击 @玩家 [攻击某位玩家]\n"+
-                    "/论道 @玩家 [和某位玩家论道]"
-                    );
-                }else if(msg.contains("thread")){
-                    //thread start&interrupt
-                }else if(msg.contains("/交易")){
-                    friend.sendMessage("未开放");
-                }else if(msg.contains("/技能")){
-                    friend.sendMessage("未开放");
-                }else if(msg.contains("/攻击")){
-                    friend.sendMessage("未开放");
-                }else if(msg.contains("/论道")){
-                    friend.sendMessage("未开放");
+                    sql.Bot_switch(in,event);
                 }
+                
                 
             }
         });
@@ -178,3 +147,23 @@ public class App {
              BotNet net = new BotNet();
         BotMysql sql = new BotMysql();
 */
+/*
+else if(msg.contains("菜单")){
+                    group.sendMessage(
+                    "命令格式: \n"+
+                    "/交易 @玩家 物品 数量 [和某位玩家进行交易]\n"+
+                    "/技能 @玩家 技能名称 [给某位玩家加Buff]\n"+
+                    "/攻击 @玩家 [攻击某位玩家]\n"+
+                    "/论道 @玩家 [和某位玩家论道]"
+                    );
+                }else if(msg.contains("/交易")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/技能")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/攻击")){
+                    group.sendMessage("未开放");
+                }else if(msg.contains("/论道")){
+                    group.sendMessage("未开放");
+                }
+
+ */
