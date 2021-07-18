@@ -78,6 +78,7 @@ public class BotMysql {
                     case "help":sub_bili_help(event);break;
                     case "list":sub_bili_list(event);break;
                     case "remove":sub_bili_remove(in,event);break;
+                    case "get":sub_bili_get(in,event);break;
                     default:{
                         System.out.println("输入参数错误，请查看sub bili help");
                     }
@@ -105,14 +106,14 @@ public class BotMysql {
                 targetGroup = String.valueOf(events.getGroup().getId());
             }
             Statement stmt = conn.createStatement();
-            String sql = "insert into person_task values (" + "0" + ",'" + // 编号
+            String sql = new String("insert into person_task values (" + "0" + ",'" + // 编号
                     targetID + "','" + // qq号
                     targetNick + "','" + // 昵称
                     targetGroup + "','" + // 发布任务群号
                     targetFrom + "','"+
                     task[2] + "','" + // 任务名
                     task[3] + // 备注
-                    "',0)";
+                    "',0)");
             // System.out.println(sql);//调试用
             stmt.execute(sql);
             stmt.close();
@@ -142,7 +143,7 @@ public class BotMysql {
             }
             String targetID = task[2];
             Statement stmt = conn.createStatement();
-            String sql = "update person_task set mark = 1 where num ="+targetID;
+            String sql = new String("update person_task set mark = 1 where num ="+targetID);
             // System.out.println(sql);//调试用
             stmt.execute(sql);
             stmt.close();
@@ -161,7 +162,7 @@ public class BotMysql {
             }
             String targetID = task[2];
             Statement stmt = conn.createStatement();
-            String sql = "delete from person_task where num = "+targetID;
+            String sql = new String("delete from person_task where num = "+targetID);
             // System.out.println(sql);//调试用
             stmt.execute(sql);
             stmt.close();
@@ -181,7 +182,7 @@ public class BotMysql {
             }
             String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
             Statement stmt = conn.createStatement();
-            String sql = "select * from person_task where id = '"+targetID+"' and `mark` = 0";
+            String sql = new String("select * from person_task where id = '"+targetID+"' and `mark` = 0");
             ResultSet R = stmt.executeQuery(sql);
             String to = new String("");//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
@@ -210,7 +211,7 @@ public class BotMysql {
             }
             String targetID = task[2];
             Statement stmt = conn.createStatement();
-            String sql = "select * from person_task where id = '"+targetID+"' and `mark` = 1";
+            String sql = new String("select * from person_task where id = '"+targetID+"' and `mark` = 1");
             ResultSet R = stmt.executeQuery(sql);
             String to = new String();//new String("num\tid\t\tnick\t\tgroup\t\tfrom\ttask\tnote\tmark\n");
             while(R.next()){
@@ -255,14 +256,14 @@ public class BotMysql {
             }
             
             Statement stmt = conn.createStatement();
-            String sql = "insert into person_task values (0,'" + // 编号
+            String sql = new String("insert into person_task values (0,'" + // 编号
                     targetID + "','" + // qq号
                     targetNick + "','" + // 昵称
                     targetGroup + "','" + // 发布任务群号
                     targetFrom + "','"+
                     task[3] + "','" + // 任务名
                     targetNote + // 备注
-                    "',0)";
+                    "',0)");
             stmt.execute(sql);
             stmt.close();
             sender.sendMessage("task send success");
@@ -415,13 +416,13 @@ public class BotMysql {
                 (String)jsonObj.get("updated_at"),
                 (String)jsonObj.get("description")
             };
-            String sql = "insert into github values (0,'"+//id
+            String sql = new String("insert into github values (0,'"+//id
                 in[0]+"','"+//url           --https://github.com/author/repo
                 in[1]+"','"+//owner         --author
                 in[2]+"','"+//repo          --repo
                 in[3]+"','"+//from          --groupId
                 in[4]+"','"+//last_update   --date
-                in[5]+"')";//info          --message
+                in[5]+"')");//info          --message
             //System.out.println(sql);
             stmt.execute(sql);
             stmt.close();
@@ -435,7 +436,7 @@ public class BotMysql {
     void git_updateGithub(String time,String[] in){//get the last update time from mysql
         try{
             Statement stmt = conn.createStatement();
-            String sql = "update github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'";
+            String sql = new String("update github set `last_update` = '"+time+"' where `owner` = '"+in[0]+"' and `repo` = '"+in[1]+"'");
             stmt.execute(sql);
             stmt.close();
         }catch (Exception e) {
@@ -453,7 +454,7 @@ public class BotMysql {
         String lastUpdateTime = new String("");
         try{
             Statement stmt = conn.createStatement();
-            String sql = "select * from github where `owner` = '"+git[0]+"' and `repo` = '"+git[1]+"'";
+            String sql = new String("select * from github where `owner` = '"+git[0]+"' and `repo` = '"+git[1]+"'");
             ResultSet re = stmt.executeQuery(sql);
             while(re.next()){
                 lastUpdateTime += re.getString("last_update");
@@ -471,7 +472,7 @@ public class BotMysql {
         ArrayList ret = new ArrayList<String>();
         try{
             Statement stmt = conn.createStatement();
-            String sql = "select * from github";
+            String sql = new String("select * from github");
             ResultSet re = stmt.executeQuery(sql);
             while(re.next()){
                 ret.add(re.getString("owner")+"/"+re.getString("repo"));
@@ -496,7 +497,7 @@ public class BotMysql {
         try{
             ArrayList Re = new ArrayList<String>();
             Statement stmt = conn.createStatement();
-            String sql = "select * from github";
+            String sql = new String("select * from github");
             ResultSet re = stmt.executeQuery(sql);
             while(re.next()){
                 Re.add(re.getString("owner")+"/"+re.getString("repo")+"*"+re.getString("last_update")+"*"+re.getString("from"));
@@ -511,7 +512,7 @@ public class BotMysql {
                 String time2 = tmpJson.getString("updated_at");
                 if(time1.compareTo(time2) != 0){
                     Re.set(i,time2+":"+strArr[0]+"*"+strArr[2]);
-                    sql = "update github set `last_update` = '"+time2+"' where `owner` = '"+strArr[0].split("/")[0]+"' and `repo` = '"+strArr[0].split("/")[1]+"'";
+                    sql = new String("update github set `last_update` = '"+time2+"' where `owner` = '"+strArr[0].split("/")[0]+"' and `repo` = '"+strArr[0].split("/")[1]+"'");
                     stmt.execute(sql);
                 }else{
                     Re.set(i,"No update:"+strArr[0]+"*"+strArr[2]);
@@ -538,8 +539,10 @@ public class BotMysql {
                 if(!ret.containsKey(sub)){
                     ret.put(sub,new ArrayList<String>());
                 }
-                ((ArrayList)ret.get(sub)).add(re.getString("uid")+"*"+re.getString("views")+"*"+re.getString("latestView")+"*"+re.getString("subFrom"));
-                //sub:["uid*views*latestView*subFrom"]
+                ((ArrayList)ret.get(sub)).add(re.getString("name")+"*"+re.getString("uid")+"*"+re.getString("views")+"*"+
+                re.getString("latestView")+"*"+re.getString("latestTitle")+"*"+
+                re.getString("subFrom")+"*"+re.getString("UserOrGroup"));
+                //sub:["name*uid*views*latestView*latestTitle*subFrom*Group"]
             }
             re.close();
             stmt.close();
@@ -552,11 +555,19 @@ public class BotMysql {
 
     void sub_bili_init(String[] in,AbstractMessageEvent event){//init subscribe bilibili
         Contact user = null;
+        String id = null;
+        if(in.length != 4){
+            user.sendMessage("Argment error");
+            return;
+        }
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
+        
         try{//sub bili init uid:return UpNick/UpUid
             net.init("https://api.bilibili.com/x/space/arc/search?mid="+in[3]+"&pn=1&ps=3&jsonp=jsonp");//init sub web
             JSONObject tmpJson = net.GetURL();
@@ -565,31 +576,50 @@ public class BotMysql {
 
             int viewsCount = tmpJson.getJSONObject("page").getIntValue("count");
             tmpJson = tmpJson.getJSONObject("list").getJSONArray("vlist").getJSONObject(0);
-            String subId = String.valueOf(user.getId());
+            if(tmpJson == null){
+                user.sendMessage("Not");
+                return;
+            }
+            String subId = String.valueOf(event instanceof FriendMessageEvent?"0":user.getId());
             String bv = tmpJson.getString("bvid");
+            String name = tmpJson.getString("author");
+            String title = tmpJson.getString("title");
 
             Statement stmt = conn.createStatement();
-            String sql = "insert into bili values (0,'"+ //id
-            in[3]+"',"+                                //uid
-            viewsCount+",'"+                           //views count
-            bv+"','"+                  //latest Bv
-            subId+"',"+         //sub id
-            String.valueOf(event instanceof FriendMessageEvent?0:1)+   //0:Friend,1:Group
-            ")";
-            //System.out.println(sql);
+            String sql = new String("insert into bili values (0,'"+    //id
+                name+"','"+                                 //name
+                in[3]+"',"+                                 //uid
+                viewsCount+",'"+                            //views count
+                bv+"','"+                                   //latest Bv
+                title+"','"+                                //latest Title
+                id+"','"+                                   //sub id
+                subId+                                      //0:Friend,Id:Group
+                "')");
+
             stmt.execute(sql);
             stmt.close();
             if(!sub_bili.containsKey(subId)){
                 System.out.println("Not contain");
                 sub_bili.put(subId,new ArrayList<String>());
             }
-            ((ArrayList)sub_bili.get(subId)).add(in[3]+"*"+viewsCount+"*"+bv+"*"+subId);//add subscribe up
-            //sub:["uid*views*latestView*subFrom"]
+            if(((ArrayList)sub_bili.get(subId)).contains(in[3])){
+                if(user instanceof Group){
+                    user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).
+                        plus(new PlainText(" up exist")));
+                }else{
+                    user.sendMessage("sub Up:"+name+"/"+in[3]);
+                }
+                return;
+            }
+
+            ((ArrayList)sub_bili.get(subId)).add(name+"*"+in[3]+"*"+viewsCount+"*"+bv+"*"+title+"*"+id+"*"+subId);//add subscribe up
+            //sub:[name*uid*views*latestView*latestTitle*subFrom*UserOfGroup]
+
             if(user instanceof Group){
                 //MessageUtils.newChain(MessageUtils.newChain("Hello"), Image.fromId("{f8f1ab55-bf8e-4236-b55e-955848d7069f}.png"));
-                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus(new PlainText(":"+tmpJson.getString("author")+"/"+tmpJson.getString("mid"))));
+                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).plus(new PlainText(" :"+name+"/"+in[3])));
             }else{
-                user.sendMessage("sub Up:"+tmpJson.getString("author")+"/"+tmpJson.getString("mid"));
+                user.sendMessage("sub Up:"+name+"/"+in[3]);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -603,9 +633,9 @@ public class BotMysql {
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
         }
-        try{
+        try{//sub bili help
             if(user instanceof Group){
-                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus("bilibili Up subscribe help:\n"+
+                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus(" bilibili Up subscribe help:\n"+
                 "sub bili [option] <args>:\n"+
                 "options:\n"+
                 "init       --"+
@@ -628,24 +658,24 @@ public class BotMysql {
 
     void sub_bili_list(AbstractMessageEvent event){//list the subsrcibe bili list
         Contact user = null;
+        String id = null;
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
-        try{
+        try{//sub bili list
             String msg = new String("list:");
-            Iterator it = sub_bili.keySet().iterator();
-            while(it.hasNext()){
-                String key = String.valueOf(it.next());
-                ArrayList<String> re = (ArrayList)sub_bili.get(key);
-                for(int i =0;i<re.size();i++){
-                    //System.out.println(re.get(i));
-                    msg += "\n"+re.get(i);
-                }
+            ArrayList<String> re = (ArrayList)sub_bili.get(id);
+            for(int i =0;i<re.size();i++){
+                //System.out.println(re.get(i));
+                String[] list = ((String)re.get(i)).split("\\*");
+                msg += "\n"+String.valueOf(i)+"-"+list[0]+"-"+list[4];
             }
             if(user instanceof Group){
-                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId()),new PlainText(msg)));
+                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id)),new PlainText(" "+msg)));
             }else{
                 user.sendMessage(msg);
             }
@@ -656,18 +686,41 @@ public class BotMysql {
 
     void sub_bili_get(String[] in,AbstractMessageEvent event){
         Contact user = null;
+        String id = null;
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
-        try{
-            
+        if(in.length != 3){
+            user.sendMessage("Error");
+            return;
+        }
+        try{//sub bili get
             Statement stmt = conn.createStatement();
-            String sql = new String("delete from bili where `id` = '"+in[3]+"'");
+            String sql = new String("select * from bili where `subFrom` = '"+id+"' and `UserOfGroup` = "+(user instanceof Group?user.getId():"0"));
             
-            stmt.execute(sql);
-            user.sendMessage("Remove success");
+            ResultSet re = stmt.executeQuery(sql);
+            ArrayList ret = new ArrayList<String>();
+            while(re.next()){
+                ret.add(re.getString("name")+"-"+re.getString("latestTitle")+"-"+re.getString("latestView"));
+            }//name*uid*views*latestView*latestTitle*subFrom*Group
+
+            String msg = new String("list:");
+
+            for(int i=0;i<ret.size();i++){
+                String[] list = ((String)ret.get(i)).split("\\*");
+                msg += "\n"+String.valueOf(i)+list[0]+"-"+list[4];
+            }
+
+            if(user instanceof Group){
+                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id)),
+                new PlainText(" "+msg)));
+            }else{
+                user.sendMessage(" "+msg);
+            }
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -675,24 +728,42 @@ public class BotMysql {
 
     void sub_bili_remove(String[] in,AbstractMessageEvent event){//remove the subscribed up
         Contact user = null;
+        String id = null;
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
-        try{//sub bili remove uid
+        try{//sub bili remove id
+            String[] list = ((String)((ArrayList)sub_bili.get(id)).get(Integer.valueOf(in[3]))).split("\\*");
+            ArrayList target = ((ArrayList)sub_bili.get(id));
+            System.out.println(Integer.valueOf(in[3]));
+            target.remove(Integer.valueOf(in[3]));
+            target.clear();
+
             Statement stmt = conn.createStatement();
-            String sql = new String("delete from bili where `id` = '"+in[3]+"'");
+            
+            String sql = new String("delete from bili where `uid` = '"+
+                list[1]+"' and `subFrom` = '"+list[5]+"'");
+            //name*uid*views*latestView*latestTitle*subFrom*Group
+
             stmt.execute(sql);
-            sub_bili.remove(in[3]);
+
             if(user instanceof Group){
-                user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId()),new PlainText("Remove success")));
+                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id)),
+                new PlainText(" Remove success")));
             }else{
                 user.sendMessage("Remove success");
             }
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    public static void biliThread(){
+
     }
 
 }
