@@ -31,7 +31,34 @@ public class BotMysql {
     private static Connection conn = null;
     private static BotNet net = null;
     private HashMap subweb = null;
-    private HashMap sub_bili = null;
+    private HashMap sub_bili = null;//HashMap<String,HashMap<Integer,BiliStruct>>
+
+    private class BiliStruct{
+        String name;
+        String uid;
+        int views;
+        String latestView;
+        String latestTitle;
+        String subFrom;
+        String UserOrGroup;
+
+        BiliStruct(String n,String u,int v,String lv,String lt,String sf,String ug){
+            name = n;
+            uid = u;
+            views = v;
+            latestView = lv;
+            latestTitle = lt;
+            subFrom = sf;
+            UserOrGroup = ug;
+        }
+
+        void update(String[] in){
+            this.name = in[0];
+            this.views = Integer.valueOf(in[1]);
+            this.latestView = in[2];
+            this.latestTitle = in[3];
+        }
+    }
 
     BotMysql() {
         try {
@@ -86,34 +113,31 @@ public class BotMysql {
                 default:{
                     System.out.println("输入参数错误，请查看task help");
                 }
-            };break;
-            case "/sub":switch(in[1]){//group list //delete the sub
-                case "git":switch(in[2]){//github subscribe
-                    case "list":sub_git_list(event);break;
-                    case "init":sub_git_init(in,event);break;
-                    case "get":sub_git_getUpdate(in,event);break;
-                    case "help":sub_git_help(event);break;
-                    case "remove":sub_git_remove(in,event);break;
-                    default:{
-                        System.out.println("输入参数错误，请查看sub git help");
-                    }
                 };break;
-                case "bili":switch(in[2]){//bilibili subscribe
-                    case "init":sub_bili_init(in,event);break;
-                    case "help":sub_bili_help(event);break;
-                    case "list":sub_bili_list(event);break;
-                    case "remove":sub_bili_remove(in,event);break;
-                    case "get":sub_bili_get(in,event);break;
-                    default:{
-                        System.out.println("输入参数错误，请查看sub bili help");
-                    }
-                };break;
+            //group list //delete the sub
+            case "/git":switch(in[1]){//github subscribe
+                case "list":sub_git_list(event);break;
+                case "init":sub_git_init(in,event);break;
+                case "get":sub_git_getUpdate(in,event);break;
+                case "help":sub_git_help(event);break;
+                case "remove":sub_git_remove(in,event);break;
                 default:{
-                    System.out.println("输入参数错误，请查看sub help");
+                    System.out.println("输入参数错误，请查看sub git help");
                 }
-            }break;
-            default:
-                System.out.println("输入参数错误，请参考help");
+                };break;
+            case "/bili":switch(in[1]){//bilibili subscribe
+                case "init":sub_bili_init(in,event);break;
+                case "help":sub_bili_help(event);break;
+                case "list":sub_bili_list(event);break;
+                case "remove":sub_bili_remove(in,event);break;
+                case "get":sub_bili_get(in,event);break;
+                default:{
+                    System.out.println("输入参数错误，请查看sub bili help");
+                }
+            };break;
+            default:{
+                System.out.println("输入参数错误，请查看sub help");
+            }
         }
     }
 
@@ -229,7 +253,7 @@ public class BotMysql {
             id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
 
-        try {//task del id
+        try {//task remove id
             if (task.length != 3){//判断如果输入参数不等于4便返回错误信息
                 errorMsg(user,id);
                 return;
@@ -395,6 +419,35 @@ public class BotMysql {
     //subweb has change from ArrayList to HashMap<String,HashMap<String,String>>
     //maybe too complex?Yeap
 
+    void git_subweb(){//init subscribe//HashMap<String,HashMap<int,String[]>>
+        try{
+            Statement stmt = conn.createStatement();
+            String sql = new String("select distinct(subFrom) from github");
+            ResultSet re = stmt.executeQuery(sql);
+            subweb = new HashMap<String,HashMap<Integer,String[]>>();//struct:QQ:["{owner/repo,last_update}"]
+            ArrayList userList = new ArrayList<String>();
+            while(re.next()){
+               userList.add(re.getString("subFrom"));
+            }
+            for(int i=0;i<userList.size();i++){
+                String user = String.valueOf(userList.get(i));
+                subweb.put(user,new HashMap<Integer,String[]>());
+                sql = new String("select * from github where `subFrom` = '"+user+"'");
+                
+                re = stmt.executeQuery(sql);
+                HashMap tmpHashMap = ((HashMap)subweb.get(user));
+                int j = 0;
+                while(re.next()){
+                    tmpHashMap.put(j++,new String[]{re.getString("owner")+"/"+re.getString("repo"),re.getString("last_update")});
+                }
+            }
+            re.close();
+            stmt.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
     void sub_git_init(String[] in,AbstractMessageEvent event){//init the subscribed web
         Contact user = null;
         String id = null;
@@ -407,8 +460,10 @@ public class BotMysql {
         }
 
         try{
-            if(in.length == 5){//input:/sub git init author repo
+            if(in.length == 4){//input:/git init author repo
                 //subweb.add(in[3]+"/"+in[4]);//add author and repo
+
+                String targetOwnerTarget = in[2]+"/"+in[3];
 
                 HashMap tmpHashMap = ((HashMap)subweb.get(id));
 
@@ -417,11 +472,11 @@ public class BotMysql {
                     subweb.put(id,tmpHashMap);
                 }
 
-                net.init("https://api.github.com/repos/"+in[3]+"/"+in[4]);
+                net.init("https://api.github.com/repos/"+targetOwnerTarget);
                 JSONObject tmpJson = net.GetURL();
 
                 if(tmpJson == null){
-                    finishMsg(user,id,in[3]+"/"+in[4]+" not exist!");
+                    finishMsg(user,id,targetOwnerTarget+" not exist!");
                     return;
                 }
                 
@@ -431,7 +486,7 @@ public class BotMysql {
 
                 tmpJson.clear();//free the resource
                 
-                tmpHashMap.put(tmpHashMap.size(),new String[]{in[3]+"/"+in[4],time});
+                tmpHashMap.put(tmpHashMap.size(),new String[]{targetOwnerTarget,time});
                 //HashMap<String,HashMap<int,String[]>>
 
                 finishMsg(user,id,"sub git init success:"+String.valueOf(tmpHashMap.size()-1));
@@ -515,15 +570,15 @@ public class BotMysql {
         }
         
         //Group group = ((GroupMessageEvent)event).getGroup();
-        if(in.length != 4){//input:/sub git remove id
+        if(in.length != 3){//input:/git remove id
             errorMsg(user,id);
             return;
         }
 
 
-        try{//input:/sub git remove id
+        try{//input:/git remove id
             Statement stmt = conn.createStatement();
-            int targetId = Integer.valueOf(in[3]);
+            int targetId = Integer.valueOf(in[2]);
             String sql = new String("delete from github where `url` = 'https://github.com/"+subweb.get(targetId)+"'");
             
             HashMap tmpMap = ((HashMap)subweb.get(id));
@@ -542,7 +597,7 @@ public class BotMysql {
     }
 
     void sub_git_getUpdate(String[] in,AbstractMessageEvent event){
-        //input:/sub git get id//use to update this repo immediately
+        //input:/git get id//use to update this repo immediately
         Contact user = null;
         String id = null;
         if(event instanceof FriendMessageEvent){
@@ -561,14 +616,14 @@ public class BotMysql {
         */
 
         //Group group = ((GroupMessageEvent)event).getGroup();
-        if(in.length != 4){
+        if(in.length != 3){//git get id
             errorMsg(user,id);
             return;
         }
 
         try{//input:/sub git get id
             Statement stmt = conn.createStatement();
-            int targetId = Integer.parseInt(in[3]);
+            int targetId = Integer.parseInt(in[2]);
             HashMap web = (HashMap)subweb.get(id);
             String[] list = (String[])web.get(targetId);
             String[] repo = list[0].split("/");
@@ -587,7 +642,7 @@ public class BotMysql {
                 return;
             }
 
-            net.init("https://api.github.com/repos/"+web);
+            net.init("https://api.github.com/repos/"+list[0]);
             JSONObject tmpJson = net.GetURL();
 
             if(tmpJson == null){//if this repo not exists or has been deleted
@@ -598,6 +653,9 @@ public class BotMysql {
             time2 = tmpJson.getString("updated_at");            
 
             //if subweb contain this repo for user
+            if(time2 == null){
+                System.out.println("YES");
+            }
 
             if(time1.compareTo(time2) > 0){
                 git_updateGithub(time2,repo);//update this repo
@@ -733,34 +791,6 @@ public class BotMysql {
     }
     */
 
-    void git_subweb(){//init subscribe//HashMap<String,HashMap<int,String[]>>
-        try{
-            Statement stmt = conn.createStatement();
-            String sql = new String("select distinct(subFrom) from github");
-            ResultSet re = stmt.executeQuery(sql);
-            subweb = new HashMap<String,HashMap<Integer,String[]>>();//struct:QQ:["{owner/repo,last_update}"]
-            ArrayList userList = new ArrayList<String>();
-            while(re.next()){
-               userList.add(re.getString("subFrom"));
-            }
-            for(int i=0;i<userList.size();i++){
-                String user = String.valueOf(userList.get(i));
-                subweb.put(user,new HashMap<Integer,String[]>());
-                sql = new String("select * from github where `subFrom` = '"+user+"'");
-                
-                re = stmt.executeQuery(sql);
-                HashMap tmpHashMap = ((HashMap)subweb.get(user));
-                while(re.next()){
-                    tmpHashMap.put(i,new String[]{re.getString("owner")+"/"+re.getString("repo"),re.getString("last_update")});
-                }
-            }
-            re.close();
-            stmt.close();
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    }
-
     public static ArrayList subThread(){//static function for Thread
         try{//HashMap<String,HashMap<int,String[]>>
             ArrayList Re = new ArrayList<String>();
@@ -799,7 +829,7 @@ public class BotMysql {
 
     void bili_sub(){//init bili subscribe
         try{
-            sub_bili = new HashMap<String,ArrayList<String>>();
+            sub_bili = new HashMap<String,HashMap<Integer,BiliStruct>>();
             Statement stmt = conn.createStatement();
             String sql = new String("select * from bili");
             ResultSet re = stmt.executeQuery(sql);
@@ -809,11 +839,11 @@ public class BotMysql {
                     return;
                 }
                 if(!sub_bili.containsKey(sub)){
-                    sub_bili.put(sub,new ArrayList<String>());
+                    sub_bili.put(sub,new HashMap<Integer,BiliStruct>());
                 }
-                ((ArrayList)sub_bili.get(sub)).add(re.getString("name")+"*"+re.getString("uid")+"*"+re.getString("views")+"*"+
-                re.getString("latestView")+"*"+re.getString("latestTitle")+"*"+
-                re.getString("subFrom")+"*"+re.getString("UserOrGroup"));
+                HashMap tmpHashMap = ((HashMap)sub_bili.get(sub));
+                tmpHashMap.put(tmpHashMap.size(),new BiliStruct(re.getString("name"),re.getString("uid"),re.getInt("views"),re.getString("latestView"),
+                    re.getString("latestTitle"),re.getString("subFrom"),re.getString("UserOrGroup")));
                 //sub:["name*uid*views*latestView*latestTitle*subFrom*Group"]
             }
             re.close();
@@ -835,13 +865,13 @@ public class BotMysql {
             id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
 
-        if(in.length != 4){
+        if(in.length != 3){//bili init uid
             errorMsg(user,id);
             return;
         }
         
-        try{//sub bili init uid:return UpNick/UpUid
-            net.init("https://api.bilibili.com/x/space/arc/search?mid="+in[3]+"&pn=1&ps=3&jsonp=jsonp");//init sub web
+        try{//bili init uid:return UpNick/UpUid
+            net.init("https://api.bilibili.com/x/space/arc/search?mid="+in[2]+"&pn=1&ps=3&jsonp=jsonp");//init sub web
             JSONObject tmpJson = net.GetURL();
             
             tmpJson = tmpJson.getJSONObject("data");
@@ -857,9 +887,22 @@ public class BotMysql {
             String name = tmpJson.getString("author");
             String title = tmpJson.getString("title");
 
-            String input = new String(name+"*"+in[3]+"*"+viewsCount+"*"+bv+"*"+title+"*"+id+"*"+subId);
+            BiliStruct BS = new BiliStruct(name,in[2],viewsCount,bv,title,id,subId);
+            //String input = new String(name+"*"+in[3]+"*"+viewsCount+"*"+bv+"*"+title+"*"+id+"*"+subId);
 
-            if(((ArrayList)sub_bili.get(id)).contains(input)){
+            HashMap upList = ((HashMap)sub_bili.get(id));
+            if(upList == null){
+                upList = new HashMap<Integer,BiliStruct>();
+            }
+
+            Iterator<Integer> it = upList.keySet().iterator();
+            while(it.hasNext()){
+                int key = it.next();
+                BiliStruct tmp = ((BiliStruct)upList.get(key));
+                //System.out.println(tmp.uid+" "+in[2]);
+                if(in[2].compareTo(String.valueOf(tmp.uid)) == 0){
+                    continue;
+                }
                 if(user instanceof Group){
                     user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).
                         plus(new PlainText(" up exist")));
@@ -872,7 +915,7 @@ public class BotMysql {
             Statement stmt = conn.createStatement();
             String sql = new String("insert into bili values (0,'"+    //id
                 name+"','"+                                 //name
-                in[3]+"',"+                                 //uid
+                in[2]+"',"+                                 //uid
                 viewsCount+",'"+                            //views count
                 bv+"','"+                                   //latest Bv
                 title+"','"+                                //latest Title
@@ -886,21 +929,22 @@ public class BotMysql {
 
             if(!sub_bili.containsKey(id)){
                 //System.out.println("Not contain");
-                ArrayList tmpArrayList = new ArrayList<String>();
-                tmpArrayList.add(input);
+                HashMap tmpArrayList = new HashMap<Integer,BiliStruct>();
+                tmpArrayList.put(id,BS);
                 
                 sub_bili.put(id,tmpArrayList);
                 //sub:["name*uid*views*latestView*latestTitle*subFrom*Group"]
-            }
-
-            ((ArrayList)sub_bili.get(id)).add(name+"*"+in[3]+"*"+viewsCount+"*"+bv+"*"+title+"*"+id+"*"+subId);//add subscribe up
+            }else{
+                HashMap tmpHashMap = ((HashMap)sub_bili.get(id));
+                tmpHashMap.put(tmpHashMap.size(),BS);//add subscribe up
             //sub:[name*uid*views*latestView*latestTitle*subFrom*UserOfGroup]
+            }
 
             if(user instanceof Group){
                 //MessageUtils.newChain(MessageUtils.newChain("Hello"), Image.fromId("{f8f1ab55-bf8e-4236-b55e-955848d7069f}.png"));
-                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).plus(new PlainText(" :"+name+"/"+in[3])));
+                user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).plus(new PlainText(" :"+name+"/"+in[2])));
             }else{
-                user.sendMessage("sub Up:"+name+"/"+in[3]);
+                user.sendMessage("sub Up:"+name+"/"+in[2]);
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -950,17 +994,21 @@ public class BotMysql {
 
         try{//sub bili list
             String msg = new String("list:");
-            ArrayList<String> re = (ArrayList)sub_bili.get(id);
-            if(re == null){
-                re = new ArrayList<String>();
+            HashMap<Integer,BiliStruct> re = (HashMap)sub_bili.get(id);
+            
+            if(re == null){//check re
+                re = new HashMap<Integer,BiliStruct>();
                 finishMsg(user,id,"Null");
                 return;
             }
+
             for(int i =0;i<re.size();i++){
                 //System.out.println(re.get(i));
-                String[] list = ((String)re.get(i)).split("\\*");
-                msg += "\n"+String.valueOf(i)+"-"+list[0]+"-"+list[4];
+                //String[] list = ((String)re.get(i)).split("\\*");
+                BiliStruct list = ((BiliStruct)re.get(i));
+                msg += "\n"+String.valueOf(i)+"-"+list.name+"-"+list.latestTitle;
             }
+
             if(user instanceof Group){
                 user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id)),new PlainText(" "+msg)));
             }else{
@@ -971,7 +1019,7 @@ public class BotMysql {
         }
     }
 
-    void sub_bili_get(String[] in,AbstractMessageEvent event){
+    void sub_bili_get(String[] in,AbstractMessageEvent event){//get the latest update for per 3h
         Contact user = null;
         String id = null;
         if(event instanceof FriendMessageEvent){
@@ -985,21 +1033,22 @@ public class BotMysql {
             user.sendMessage("Error");
             return;
         }
-        try{//sub bili get
+        try{//sub bili get id
             Statement stmt = conn.createStatement();
-            String sql = new String("select * from bili where `subFrom` = '"+id+"' and `UserOrGroup` = "+(user instanceof Group?user.getId():"0"));
+            String sql = new String("select * from bili where `subFrom` = '"+id+"' and `UserOrGroup` = '"+(user instanceof Group?user.getId():"0")+"'");
             
             ResultSet re = stmt.executeQuery(sql);
             ArrayList ret = new ArrayList<String>();
             while(re.next()){
-                ret.add(re.getString("name")+"-"+re.getString("latestTitle")+"-"+re.getString("latestView"));
-            }//name*uid*views*latestView*latestTitle*subFrom*Group
+                ret.add(re.getString("name")+"-"+String.valueOf(re.getInt("views"))+"-"+re.getString("latestTitle")+"-"+re.getString("latestView"));
+            }//name*uid*views*latestView*latestTitle*subFrom*GroupString
 
             String msg = new String("list:");
 
             for(int i=0;i<ret.size();i++){
-                String[] list = ((String)ret.get(i)).split("\\*");
-                msg += "\n"+String.valueOf(i)+list[0]+"-"+list[4];
+                BiliStruct list = ((BiliStruct)((HashMap)sub_bili.get(id)).get(i));
+                list.update(((String)ret.get(i)).split("-"));
+                msg += "\n"+String.valueOf(i)+list.name+"-"+list.latestTitle;
             }
 
             if(user instanceof Group){
@@ -1023,17 +1072,23 @@ public class BotMysql {
             user = ((GroupMessageEvent)event).getGroup();
             id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
         }
-        try{//sub bili remove id
-            String[] list = ((String)((ArrayList)sub_bili.get(id)).get(Integer.valueOf(in[3]))).split("\\*");
-            ArrayList target = ((ArrayList)sub_bili.get(id));
-            System.out.println(Integer.valueOf(in[3]));
-            target.remove(Integer.valueOf(in[3]));
+
+        if(in.length != 3){
+            errorMsg(user,id);
+            return;
+        }
+
+        try{//bili remove id
+            BiliStruct list = ((BiliStruct)((HashMap)sub_bili.get(id)).get(Integer.valueOf(in[2])));
+            HashMap target = ((HashMap)sub_bili.get(id));
+            //System.out.println(Integer.valueOf(in[2]));
+            target.remove(Integer.valueOf(in[2]));
             target.clear();
 
             Statement stmt = conn.createStatement();
             
             String sql = new String("delete from bili where `uid` = '"+
-                list[1]+"' and `subFrom` = '"+list[5]+"'");
+                list.uid+"' and `subFrom` = '"+list.subFrom+"'");
             //name*uid*views*latestView*latestTitle*subFrom*Group
 
             stmt.execute(sql);
@@ -1074,13 +1129,16 @@ public class BotMysql {
                 }
 
                 tmpJson = tmpJson.getJSONObject("list").getJSONArray("vlist").getJSONObject(0);
+                String newName = tmpJson.getString("author");
                 String newViewTitle = tmpJson.getString("title");
                 String newViewBv = tmpJson.getString("bvid");
 
-                sql = new String("update bili set `views` = "+newCount+
+                sql = new String("update bili set `name` ='"+newName+
+                    "',`views` = "+newCount+
                     ",`latestView` = '"+newViewBv+
-                    "',`latestTitle` = '"+newViewTitle+"' where `uid` = '"+
-                    list[1]+"'");
+                    "',`latestTitle` = '"+newViewTitle+
+                    "' where `uid` = '"+list[1]+
+                    "'");
 
                 stmt.execute(sql);
             }
