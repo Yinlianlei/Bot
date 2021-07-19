@@ -82,7 +82,29 @@ public class BotThread extends Thread {
                 }
                 time1 = new Date();
                 if(time1.compareTo(time2) > 0){//rewrite
-                    ArrayList re = BotMysql.subThread();
+                    BotMysql.subThread();
+                    time2_init();//BotActiveEvent
+                }
+                if(time1.compareTo(time3) > 0){
+                    BotMysql.biliUpdateThread();
+                    time3_init();
+                }
+                sleepTime = time3.getTime() - time1.getTime();
+
+                System.out.println("latest-Thread-msg:sleep time:"+String.valueOf(sleepTime));
+                if(sleepTime < 0){
+                    continue;
+                }
+                Thread.sleep(sleepTime);
+            }
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+}
+
+/*
+ArrayList re = BotMysql.subThread();
                     for(int i=0;i<re.size();i++){
                         String[] strArr = String.valueOf(re.get(i)).split("\\*");//updateTime:owner/repo-groupId
                         System.out.println(strArr[0]+" "+strArr[1]);
@@ -106,21 +128,4 @@ public class BotThread extends Thread {
                         Group group = bot.getGroupOrFail(Long.valueOf(key));
                         group.sendMessage(msg);
                     }
-                    time2_init();//BotActiveEvent
-                }
-                if(time1.compareTo(time3) > 0){
-                    BotMysql.biliUpdateThread();
-                }
-                sleepTime = time3.getTime() - time1.getTime();
-
-                System.out.println("latest-Thread-msg:sleep time:"+String.valueOf(sleepTime));
-                if(sleepTime < 0){
-                    continue;
-                }
-                Thread.sleep(sleepTime);
-            }
-        }catch(Exception e){
-            e.printStackTrace();
-        }
-    }
-}
+*/
