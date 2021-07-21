@@ -10,6 +10,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import java.util.Date;
+import java.text.SimpleDateFormat;
+
 import net.mamoe.mirai.message.data.PlainText;
 import net.mamoe.mirai.message.data.MessageUtils;
 import net.mamoe.mirai.message.data.MessageChain;
@@ -107,6 +110,7 @@ public class BotMysql {
                 case "remove":task_del(in,event);break;
                 case "list":task_list(in,event);break;
                 case "send":task_send(in,event);break;
+                case "change":task_change(in,event);break;
                 case "comp":task_comp(in,event);break;
                 case "help":task_help(event);;break;
                 case "listC":task_listC(in,event);break;
@@ -131,6 +135,7 @@ public class BotMysql {
                 case "list":sub_bili_list(event);break;
                 case "remove":sub_bili_remove(in,event);break;
                 case "new":sub_bili_new(in,event);break;
+                case "anime":sub_bili_timeline(in,event);break;
                 case "get":sub_bili_get(in,event);break;
                 default:{
                     System.out.println("输入参数错误，请查看sub bili help");
@@ -370,20 +375,54 @@ public class BotMysql {
         }
     }
 
-    void task_send(String[] task,AbstractMessageEvent event){//send task to member
+    void task_change(String[] task,AbstractMessageEvent event){//change the task
         Contact user = null;
         String id = null;
-        String targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0], 
-            targetNick = null, targetGroup = null,targetNote=null,targetFrom = null;
         if(event instanceof FriendMessageEvent){
             user = ((FriendMessageEvent)event).getSender();
             id = String.valueOf(user.getId());
         }else if(event instanceof GroupMessageEvent){
             user = ((GroupMessageEvent)event).getGroup();
             id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        if(task.length != 5 && task.length != 4){//task change id title note
+            errorMsg(user,id);
+            return;
+        }
+
+        try{
+            String targetId = task[2],targetTitle = task[3],targetNote = null;
+            if(task.length == 5){
+                targetNote = task[4];
+            }
+            Statement stmt = conn.createStatement();
+            String sql = new String("update person_task set `task` = '"+targetTitle+
+            "',`note` = '"+targetNote+"' where `num`='"+targetId+"'");
+
+            stmt.execute(sql);
+            stmt.close();
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    void task_send(String[] task,AbstractMessageEvent event){//send task to member
+        Contact user = null;
+        String id = null;
+        String targetID = null,targetNick = null, targetGroup = null,targetNote=null,targetFrom = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+            finishMsg(user,id,"Group only");
+            return;
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+            targetID = event.getMessage().serializeToMiraiCode().split("mirai:at:")[1].split("]")[0];
 
             User sender = ((GroupMessageEvent)event).getSender();
-            targetNick = sender.getNick();
+            targetNick = ((User)((Group)((GroupMessageEvent)event).getGroup()).getOrFail(Long.valueOf(targetID))).getNick();
             targetGroup = String.valueOf(user.getId());
             targetFrom = String.valueOf(sender.getId());
         }
@@ -1177,6 +1216,91 @@ public class BotMysql {
         }catch(Exception e){
             e.printStackTrace();
         }
+    }
+
+    void sub_bili_timeline(String[] in,AbstractMessageEvent event){
+        Contact user = null;
+        String id = null;
+        int day = 0;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        if(in.length != 2 && in.length != 3){//bili anime <day/week>
+            errorMsg(user,id);
+            return;
+        }
+
+        try{
+            net.init("https://api.bilibili.com/pgc/web/timeline/v2?season_type=1");
+            JSONObject tmpJson = net.GetURL();
+            JSONArray result = tmpJson.getJSONObject("result").getJSONArray("timeline");
+            String msg = new String("");
+
+            if(in.length == 3 && in[2].compareTo("week") == 0){
+                finishMsg(user,id,biliDailyAnime());
+                return;
+            }else if(in.length == 3){
+                day = Integer.valueOf(in[2]);
+            }else{
+                for(day = 0;day<result.size();day++)
+                    if(result.getJSONObject(day).getIntValue("is_today") != 1)
+                        continue;
+                    else
+                        break;
+                day += 1;
+            }
+
+            tmpJson = result.getJSONObject(day);
+            msg += tmpJson.getString("date")+":";
+            result = tmpJson.getJSONArray("episodes");
+
+            for(int i=0;i<result.size();i++){
+                JSONObject tmp = result.getJSONObject(i);
+                msg += "\n" + tmp.getString("title")+"-"+tmp.getString("pub_index")+"-"+tmp.getString("pub_time");
+                tmp.clear();
+            }
+
+            result.clear();
+            tmpJson.clear();
+            finishMsg(user,id,msg);
+        }catch(Exception e){
+            finishMsg(user,id,"error");
+            e.printStackTrace();
+        }
+    }
+
+    public static String biliDailyAnime(){
+        try{
+            net.init("https://api.bilibili.com/pgc/web/timeline/v2?season_type=1");
+            JSONObject tmpJson = net.GetURL();
+
+            JSONArray result = tmpJson.getJSONObject("result").getJSONArray("timeline");
+            String msg = new String("");
+            for(int i=0;i<result.size();i++){
+                JSONObject tmp = result.getJSONObject(i);
+                msg += tmp.getString("date")+" list:";
+                JSONArray tmpArray = tmp.getJSONArray("episodes");
+                for(int j=0;j<tmpArray.size();j++){
+                    tmp = tmpArray.getJSONObject(j);
+                    msg += "\n"+tmp.getString("title")+"-"+tmp.getString("pub_index")+"-"+tmp.getString("pub_time");
+                    tmp.clear();
+                }
+                tmpArray.clear();
+                msg += "\n\n";
+            }
+            msg += "以上!";
+            result.clear();
+            tmpJson.clear();
+            return msg;
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+        return "";
     }
 
     public static void biliUpdateThread(){//for thread to update data
