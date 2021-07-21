@@ -130,6 +130,7 @@ public class BotMysql {
                 case "help":sub_bili_help(event);break;
                 case "list":sub_bili_list(event);break;
                 case "remove":sub_bili_remove(in,event);break;
+                case "new":sub_bili_new(in,event);break;
                 case "get":sub_bili_get(in,event);break;
                 default:{
                     System.out.println("输入参数错误，请查看sub bili help");
@@ -895,21 +896,15 @@ public class BotMysql {
                 upList = new HashMap<Integer,BiliStruct>();
             }
 
-            Iterator<Integer> it = upList.keySet().iterator();
-            while(it.hasNext()){
-                int key = it.next();
-                BiliStruct tmp = ((BiliStruct)upList.get(key));
-                //System.out.println(tmp.uid+" "+in[2]);
-                if(in[2].compareTo(String.valueOf(tmp.uid)) == 0){
+            for(int i =0 ;i<upList.size();i++){
+                BiliStruct tmp = ((BiliStruct)upList.get(i));
+
+                if(tmp.uid.compareTo(in[2]) != 0){
                     continue;
-                }
-                if(user instanceof Group){
-                    user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).
-                        plus(new PlainText(" up exist")));
                 }else{
-                    user.sendMessage(" up exist");
+                    finishMsg(user,id,"up exist");
+                    return;
                 }
-                return;
             }
 
             Statement stmt = conn.createStatement();
@@ -1104,6 +1099,86 @@ public class BotMysql {
         }
     }
 
+    void sub_bili_new(String[] in,AbstractMessageEvent event){//get hte newest views
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        if(in.length != 3){//bili new id
+            errorMsg(user,id);
+            return;
+        }
+
+        try{
+            int targetId = Integer.valueOf(in[2]);
+            BiliStruct userUp = ((BiliStruct)((HashMap)sub_bili.get(id)).get(targetId));
+            String uid = userUp.uid;
+            int oldCount = userUp.views;
+
+            net.init("https://api.bilibili.com/x/space/arc/search?mid="+uid+"&pn=1&ps=1&jsonp=jsonp");//get i view to check viewCount
+            JSONObject tmpJson = net.GetURL();
+
+            int newestCount = ((tmpJson.getJSONObject("data")).getJSONObject("page")).getIntValue("count");
+
+            if(oldCount < newestCount){
+                net.init("https://api.bilibili.com/x/space/arc/search?mid="+uid+"&pn=1&ps="+String.valueOf(newestCount-oldCount)+"&jsonp=jsonp");//get i view to check viewCount
+                tmpJson = net.GetURL();
+
+                JSONArray viewList = tmpJson.getJSONObject("data").getJSONObject("list").getJSONArray("vlist");
+
+                String msg = new String("list:");
+                for(int i=0;i<viewList.size();i++){
+                    JSONObject tmp = viewList.getJSONObject(i);
+                    msg += "\n"+String.valueOf(i)+"-"+tmp.getString("title");
+                    tmp.clear();
+                }
+                finishMsg(user,id,msg);
+                viewList.clear();
+                
+            }else{
+                finishMsg(user,id,"no update");
+            }
+            tmpJson.clear();
+        }catch(Exception e){
+            finishMsg(user,id,"ERROR stack");
+            e.printStackTrace();
+        }
+    }
+
+    void sub_bili_upSearch(String[] in,AbstractMessageEvent event){//need to login and keep the cookie
+        Contact user = null;
+        String id = null;
+        if(event instanceof FriendMessageEvent){
+            user = ((FriendMessageEvent)event).getSender();
+            id = String.valueOf(user.getId());
+        }else if(event instanceof GroupMessageEvent){
+            user = ((GroupMessageEvent)event).getGroup();
+            id = String.valueOf(((GroupMessageEvent)event).getSender().getId());
+        }
+
+        if(in.length != 3){//bili up @name
+            errorMsg(user,id);
+            return;
+        }
+
+        try{
+            String upName = in[2];
+            
+            BotNet tar = new BotNet("http://api.bilibili.com/x/web-interface/search/type?keyword="+upName+"&search_type=bili_user&user_type=1&order=fans");
+            JSONObject result = tar.GetURL();
+
+
+        }catch(Exception e){
+            e.printStackTrace();
+        }
+    }
+
     public static void biliUpdateThread(){//for thread to update data
         try{
             Statement stmt = conn.createStatement();
@@ -1191,4 +1266,20 @@ class BotMysql{
         }
     }
 }
+            Iterator<Integer> it = upList.keySet().iterator();
+            while(it.hasNext()){
+                int key = it.next();
+                BiliStruct tmp = ((BiliStruct)upList.get(key));
+                //System.out.println(tmp.uid+" "+in[2]);
+                if(in[2].compareTo(String.valueOf(tmp.uid)) == 0){
+                    continue;
+                }
+                if(user instanceof Group){
+                    user.sendMessage(MessageUtils.newChain(new At(Long.valueOf(id))).
+                        plus(new PlainText(" up exist")));
+                }else{
+                    user.sendMessage(" up exist");
+                }
+                return;
+            }
 */

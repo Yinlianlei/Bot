@@ -22,7 +22,7 @@ public class BotThread extends Thread {
     private HashMap groupMsg = null;
     private Bot bot = null;
     BotThread() {//init
-        format = new SimpleDateFormat ("yyyy.MM.dd hh:mm:ss");//init format
+        format = new SimpleDateFormat ("yyyy.MM.dd HH:mm:ss");//init format
         bot = Bot.getInstance(2683380854L);//get target Bot
         groupMsg = new HashMap<String,ArrayList<String>>();
         time2_init();
@@ -36,20 +36,20 @@ public class BotThread extends Thread {
                 time1 = new Date();
             }
             String[] t = format.format(new Date(time1.getTime()+24*60*60*1000)).split(" ");
-            //String[] t = format.format(new Date(time1.getTime())).split(" ");
-            //time2 = format.parse(t[0]+" 07:00:00");//init send message time
+            //String[] t = format.format(new Date(time1.getTime()+60*1000)).split(" ");//test
             time2 = format.parse(t[0]+" 7:00:00");//init send message time
         }catch(Exception e){
             e.printStackTrace();
         }
     }
 
-    void time3_init(){
+    void time3_init(){//update
         try{
             if(time1 == null){
                 time1 = new Date();
             }
             time3 = new Date(time1.getTime()+3*60*60*1000);//init send message time
+            //time3 = new Date(time1.getTime()+60*1000);//test
         }catch(Exception e){
             e.printStackTrace();
         }
@@ -81,17 +81,20 @@ public class BotThread extends Thread {
                     break;
                 }
                 time1 = new Date();
+                //System.out.println("Now time:"+format.format(time1));
                 if(time1.compareTo(time2) > 0){//rewrite
+                    System.out.println("update time2");
                     BotMysql.subThread();
                     time2_init();//BotActiveEvent
                 }
                 if(time1.compareTo(time3) > 0){
+                    System.out.println("update time3");
                     BotMysql.biliUpdateThread();
                     time3_init();
                 }
                 sleepTime = time3.getTime() - time1.getTime();
 
-                System.out.println("latest-Thread-msg:sleep time:"+String.valueOf(sleepTime));
+                System.out.println("latest-Thread-msg:sleep time:"+format.format(time1.getTime()+sleepTime));
                 if(sleepTime < 0){
                     continue;
                 }
@@ -128,4 +131,7 @@ ArrayList re = BotMysql.subThread();
                         Group group = bot.getGroupOrFail(Long.valueOf(key));
                         group.sendMessage(msg);
                     }
+
+                    //String[] t = format.format(new Date(time1.getTime())).split(" ");
+            //time2 = format.parse(t[0]+" 07:00:00");//init send message time
 */
