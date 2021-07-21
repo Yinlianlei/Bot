@@ -211,6 +211,7 @@ public class BotMysql {
         "add [任务] <备注(可选)> --任务添加\n\t"+
         "comp [任务ID] --任务完成\n\t"+
         "remove [任务ID] --任务删除\n\t"+
+        "change [任务ID] [任务] <备注(可选)> --改变目标信息 \n\t"+
         "send @[QQ号] [任务] <备注(可选)> --发送任务给他人\n"
         );
     }
@@ -587,10 +588,10 @@ public class BotMysql {
             String msg = new String("sub git help\n"+
             "sub git [option] <args>\n"+
             "option:\n"+
-            "init   --\n"+
-            "get    --\n"+
-            "remove --\n"+
-            "list   --\n"
+            "init <author> <repo> --初始化指定仓库\n"+
+            "get <id> --获取编号的更新情况\n"+
+            "remove <id> --移除编号目标\n"+
+            "list --列出用户订阅的仓库及其编号\n"
             );
             finishMsg(user,id,msg);
         }catch(Exception e){
@@ -997,18 +998,20 @@ public class BotMysql {
                 user.sendMessage(MessageUtils.newChain(new At(((GroupMessageEvent)event).getSender().getId())).plus(" bilibili Up subscribe help:\n"+
                 "sub bili [option] <args>:\n"+
                 "options:\n"+
-                "init       --\n"+
-                "list       --\n"+
-                "help       --\n"+
-                "remove     --\n"));
+                "init <uid> --初始化指定uid的up主\n"+
+                "list --列除\n"+
+                "help --列出指令帮助\n"+
+                "anime <id/week> --列出新番\n"+
+                "remove --移除指令\n"));
             }else{
                 user.sendMessage("bilibili Up subscribe help:\n"+
                 "sub bili [option] <args>:\n"+
                 "options:\n"+
-                "init       --\n"+
-                "list       --\n"+
-                "help       --\n"+
-                "remove     --\n");
+                "init <uid> --初始化指定uid的up主\n"+
+                "list --列除\n"+
+                "help --列出指令帮助\n"+
+                "anime <id/week> --列出新番\n"+
+                "remove <id> --移除指令\n");
             }
         }catch(Exception e){
             e.printStackTrace();
@@ -1218,7 +1221,7 @@ public class BotMysql {
         }
     }
 
-    void sub_bili_timeline(String[] in,AbstractMessageEvent event){
+        void sub_bili_timeline(String[] in,AbstractMessageEvent event){
         Contact user = null;
         String id = null;
         int day = 0;
@@ -1245,14 +1248,13 @@ public class BotMysql {
                 finishMsg(user,id,biliDailyAnime());
                 return;
             }else if(in.length == 3){
-                day = Integer.valueOf(in[2]);
+                day = Integer.valueOf(in[2]) - 1;
             }else{
                 for(day = 0;day<result.size();day++)
                     if(result.getJSONObject(day).getIntValue("is_today") != 1)
                         continue;
                     else
                         break;
-                day += 1;
             }
 
             tmpJson = result.getJSONObject(day);
